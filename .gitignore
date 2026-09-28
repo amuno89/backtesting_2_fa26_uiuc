@@ -209,6 +209,14 @@ tempCodeRunnerFile.py
 # PyPI configuration file
 .pypirc
 
+# Generated market-data snapshots and backtest results
+data/raw/*.csv
+data/cleaned/*.csv
+data/quality/*.csv
+data/quality/*.json
+results/*
+!results/.gitkeep
+
 # Marimo
 marimo/_static/
 marimo/_lsp/
