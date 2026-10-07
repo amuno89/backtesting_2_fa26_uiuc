@@ -6,6 +6,7 @@ import pytest
 from backtest import backtest
 from data import load_prices, validate_prices
 from metrics import summarize
+from run import analyze
 
 
 @pytest.fixture(scope="module")
@@ -16,12 +17,16 @@ def prices():
     return load_prices(folder).iloc[:20]
 
 
-def test_buy_and_hold(prices):
+@pytest.mark.parametrize("column_names", [None, [f"portfolio_{i}" for i in range(10)]])
+def test_buy_and_hold(prices, column_names):
     result = backtest(prices, prices.notna().astype(float))
     expected = prices.iloc[-1] / prices.iloc[0]
     np.testing.assert_allclose(result["equity"].iloc[-1], expected)
     np.testing.assert_allclose(result["benchmark_equity"].iloc[-1], expected)
-    summary = summarize(result["strategy_returns"])
+    returns = result["strategy_returns"].copy()
+    if column_names is not None:
+        returns.columns = column_names
+    summary = summarize(returns)
     np.testing.assert_allclose(summary["total_return"], expected - 1)
     assert summary["sharpe_ratio"].isna().all()
 
@@ -64,3 +69,20 @@ def test_constant_excess_returns_have_undefined_sharpe(prices):
     cash_returns = prices.pct_change(fill_method=None).iloc[1:] * 0
     # This rate tests the formula only; it is not a chosen assumption for analysis.
     assert summarize(cash_returns, risk_free=0.05)["sharpe_ratio"].isna().all()
+
+
+@pytest.mark.parametrize("benchmark_only", [True, False])
+def test_shared_analysis(prices, benchmark_only):
+    def test_signals(history):
+        decisions = history.notna().astype(float)
+        decisions.iloc[:3] = np.nan
+        return decisions
+
+    strategy = None if benchmark_only else test_signals
+    result = analyze(os.environ["BACKTEST_DATA"], strategy=strategy)
+    assert result["benchmark_only"] is benchmark_only
+    assert result["prices"].iloc[:len(prices)].equals(prices)
+    expected_start = prices.index[1 if benchmark_only else 4]
+    assert result["asset_returns"].index[0] == expected_start
+    assert result["asset_returns"].equals(result["strategy_returns"])
+    assert result["summary"].equals(result["benchmark_summary"])
