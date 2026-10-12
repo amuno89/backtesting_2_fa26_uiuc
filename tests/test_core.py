@@ -5,6 +5,7 @@ import pytest
 
 from backtest import backtest
 from data import load_prices, validate_prices
+from mean_reversion import mean_reversion
 from metrics import summarize
 from run import analyze
 
@@ -86,3 +87,61 @@ def test_shared_analysis(prices, benchmark_only):
     assert result["asset_returns"].index[0] == expected_start
     assert result["asset_returns"].equals(result["strategy_returns"])
     assert result["summary"].equals(result["benchmark_summary"])
+
+
+def test_mean_reversion_signals(prices):
+    history = load_prices(os.environ["BACKTEST_DATA"]).iloc[:260]
+    original = history.copy()
+    signals = mean_reversion(history)
+    assert signals.index.equals(history.index) and signals.columns.equals(history.columns)
+    assert signals.iloc[:14].isna().all().all()
+    assert signals.iloc[14:].isin([0.0, 1.0]).all().all()
+    assert mean_reversion(history.iloc[:40]).equals(signals.iloc[:40])
+    assert history.equals(original)
+    # Independently seed pandas' exponential average to check Wilder's RSI.
+    changes = history.diff()
+    gains = changes.clip(lower=0)
+    losses = -changes.clip(upper=0)
+    gains.iloc[14] = gains.iloc[1:15].mean()
+    losses.iloc[14] = losses.iloc[1:15].mean()
+    average_gain = gains.iloc[14:].ewm(alpha=1 / 14, adjust=False).mean()
+    average_loss = losses.iloc[14:].ewm(alpha=1 / 14, adjust=False).mean()
+    rsi = 100 - 100 / (1 + average_gain / average_loss)
+    decisions = signals.iloc[14:]
+    expected = decisions.shift(1).fillna(0)
+    expected[rsi < 30] = 1.0
+    expected[rsi >= 50] = 0.0
+    assert decisions.equals(expected)
+    # Approved QQQ observations: cash, oversold entry, continued hold, then exit.
+    dates = ["2010-01-25", "2010-01-29", "2010-02-01", "2010-02-17"]
+    assert signals.loc[dates, "QQQ"].tolist() == [0.0, 1.0, 1.0, 0.0]
+
+
+def test_mean_reversion_integration(prices):
+    result = analyze(os.environ["BACKTEST_DATA"], strategy=mean_reversion)
+    history = result["prices"]
+    signals = mean_reversion(history)
+    assert result["benchmark_only"] is False
+    assert result["held_positions"].equals(signals.shift(1).iloc[15:])
+    assert result["equity"].index[0] == history.index[14]
+    expected = signals.shift(1).iloc[15:] * history.pct_change(fill_method=None).iloc[15:]
+    assert result["strategy_returns"].equals(expected)
+    assert result["benchmark_returns"].index.equals(expected.index)
+    assert result["summary"].equals(summarize(expected))
+
+
+def test_mean_reversion_zero_gain_loss(prices):
+    # Actual second-day moves: SPY up, IWM down, QQQ unchanged (neutral RSI 50).
+    signals = mean_reversion(prices, period=1)
+    assert signals.iloc[1][["SPY", "IWM", "QQQ"]].tolist() == [0.0, 1.0, 0.0]
+    neutral_signals = mean_reversion(prices, period=1, entry=51, exit=75)
+    assert neutral_signals.iloc[1]["QQQ"] == 1.0
+    boundary_signals = mean_reversion(prices, period=1, entry=0)
+    assert boundary_signals.iloc[1]["IWM"] == 0.0
+
+
+@pytest.mark.parametrize("options", [{"period": 0}, {"period": 1.5}, {"period": True},
+                                     {"entry": 50}, {"exit": 101}, {"entry": np.nan}])
+def test_mean_reversion_invalid_parameters(prices, options):
+    with pytest.raises(ValueError):
+        mean_reversion(prices, **options)
