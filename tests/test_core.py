@@ -94,8 +94,8 @@ def test_mean_reversion_signals(prices):
     original = history.copy()
     signals = mean_reversion(history)
     assert signals.index.equals(history.index) and signals.columns.equals(history.columns)
-    assert signals.iloc[:14].isna().all().all()
-    assert signals.iloc[14:].isin([0.0, 1.0]).all().all()
+    assert signals.iloc[:14].isna().all(axis=None)
+    assert signals.iloc[14:].isin([0.0, 1.0]).all(axis=None)
     assert mean_reversion(history.iloc[:40]).equals(signals.iloc[:40])
     assert history.equals(original)
     # Independently seed pandas' exponential average to check Wilder's RSI.
@@ -121,10 +121,11 @@ def test_mean_reversion_integration(prices):
     result = analyze(os.environ["BACKTEST_DATA"], strategy=mean_reversion)
     history = result["prices"]
     signals = mean_reversion(history)
+    expected_positions = signals.shift(1).iloc[15:]
     assert result["benchmark_only"] is False
-    assert result["held_positions"].equals(signals.shift(1).iloc[15:])
+    assert result["held_positions"].equals(expected_positions)
     assert result["equity"].index[0] == history.index[14]
-    expected = signals.shift(1).iloc[15:] * history.pct_change(fill_method=None).iloc[15:]
+    expected = expected_positions * history.pct_change(fill_method=None).iloc[15:]
     assert result["strategy_returns"].equals(expected)
     assert result["benchmark_returns"].index.equals(expected.index)
     assert result["summary"].equals(summarize(expected))

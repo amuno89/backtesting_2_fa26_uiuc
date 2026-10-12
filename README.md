@@ -25,7 +25,8 @@ and then through a pull request into `main`.
 Other strategies, plots, and portfolio analysis will be added
 only when their required choices and scope are supplied. Each file keeps the role
 in the agreed plan. All source, tests, comments, and blank lines combined must stay
-below 500 lines; the full-project planning target is about 350-360 lines.
+below 500 lines. The complete mean-reversion addition, including tests, must add
+no more than 100 code lines.
 
 ## Run the current baseline
 
@@ -55,14 +56,39 @@ print(result["benchmark_summary"].to_string())
 PY
 ```
 
-For each ticker, buy when 14-day RSI is below 30, hold until RSI is at least 50,
-then return to cash. These are long-only exposures, not a combined portfolio.
-The first RSI uses 14 price changes (15 prices); later values use Wilder's
-smoothed average gains and losses. All gains gives RSI 100, all losses gives 0,
-and no movement gives neutral RSI 50. The first 14 signal rows remain missing.
-The shared backtest shifts decisions once, so evaluation begins at price
-observation 16, with the benchmark on the same dates. At least 17 price observations
-are needed for its minimum of two evaluation returns.
+### How to read the strategy
+
+`mean_reversion` keeps three steps together: check the settings, prepare daily
+gains and losses, then update RSI and each ticker's position one day at a time.
+It takes a price table, with dates in rows and tickers in columns, and returns
+a decision table with the same layout. `1.0` means invested, `0.0` means cash,
+and `NaN` means there is not enough history to make a decision yet.
+
+RSI (Relative Strength Index) compares recent gains with losses. The default
+uses 14 daily price changes, so the first value needs 15 price observations.
+Wilder's smoothing starts with the average of those gains and losses; afterward,
+each average becomes (13 times its previous value + today's gain or loss) / 14.
+Losses are measured as positive amounts. RSI is 100 times the average gain divided
+by the sum of the average gain and average loss. All gains gives RSI 100 and all
+losses gives 0. When both smoothed averages are zero, this implementation uses
+neutral RSI 50; a single flat day does not reset an existing RSI to 50.
+
+| RSI after warm-up | Decision for each ticker |
+|---|---|
+| Below 30 | Buy if currently in cash; otherwise remain invested |
+| From 30 up to, but not including, 50 | Keep the current position: invested or cash |
+| 50 or higher | Sell if invested; otherwise remain in cash |
+
+The mean-reversion idea is to test whether a rebound follows recent weakness.
+This is a hypothesis, not a guarantee that a low-RSI asset will recover. Holdings
+are tracked separately for each ticker; these are not weights in a combined portfolio.
+
+Decisions are made at the close. The shared backtest applies each decision to the
+following close-to-close return, so today's price is not used to choose today's
+position. With the default period, the first 14 decision rows stay missing;
+the first decision is at observation 15 and evaluation starts at observation 16.
+The benchmark uses those same evaluation dates. At least 17 price observations
+are needed for the backtest's minimum of two evaluation returns.
 
 The function only calculates signals from its input; it does not download, change,
 or save data. It does not depend on Huixin's strategy file. Both strategies can

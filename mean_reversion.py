@@ -5,7 +5,7 @@ import pandas as pd
 
 
 def mean_reversion(prices, period=14, entry=30, exit=50):
-    """Return same-day decisions; the shared backtest applies them one day later."""
+    """Return daily decisions: 1 invested, 0 cash, and NaN during warm-up."""
     if isinstance(period, bool) or not isinstance(period, int) or period < 1:
         raise ValueError("RSI period must be a positive integer.")
     if not 0 <= entry < exit <= 100:
@@ -13,21 +13,21 @@ def mean_reversion(prices, period=14, entry=30, exit=50):
     changes = prices.diff()
     gains = changes.clip(lower=0)
     losses = -changes.clip(upper=0)
-    # Wilder starts with the average of the first period price changes.
+    # Seed Wilder's smoothing with the first period daily gains and losses.
     average_gain = gains.iloc[1:period + 1].mean()
     average_loss = losses.iloc[1:period + 1].mean()
     signals = pd.DataFrame(np.nan, index=prices.index, columns=prices.columns)
-    position = pd.Series(0.0, index=prices.columns)
+    positions = pd.Series(0.0, index=prices.columns)
     for day in range(period, len(prices)):
         if day > period:
             average_gain = (average_gain * (period - 1) + gains.iloc[day]) / period
             average_loss = (average_loss * (period - 1) + losses.iloc[day]) / period
-        movement = average_gain + average_loss
+        total_movement = average_gain + average_loss
         # RSI measures smoothed gains as a percentage of total price movement.
-        rsi = 100 * average_gain / movement
-        rsi = rsi.mask(movement.eq(0), 50.0)  # No price movement means neutral RSI.
-        position[rsi < entry] = 1.0
-        position[rsi >= exit] = 0.0
-        # Between the thresholds, keep yesterday's position. Warm-up stays missing.
-        signals.iloc[day] = position
+        rsi = 100 * average_gain / total_movement
+        rsi = rsi.mask(total_movement.eq(0), 50.0)  # Both averages zero: neutral RSI.
+        positions[rsi < entry] = 1.0
+        positions[rsi >= exit] = 0.0
+        # Keep positions between the thresholds; only the backtest delays execution.
+        signals.iloc[day] = positions
     return signals
