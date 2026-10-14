@@ -1,5 +1,5 @@
 import numpy as np
-import pandas as pd
+
 
 
 def golden_cross(prices, short=50, long=200):
@@ -9,3 +9,4 @@ def golden_cross(prices, short=50, long=200):
     signals = (short_ma > long_ma).astype(float)
     signals[long_ma.isna()] = np.nan
     return signals
+
