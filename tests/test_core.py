@@ -9,7 +9,7 @@ from mean_reversion import mean_reversion
 from metrics import summarize
 from run import analyze
 import pandas as pd
-from strategies import golden_cross
+from strategies import golden_cross, momentum
 
 
 @pytest.fixture(scope="module")
@@ -156,4 +156,13 @@ def test_golden_cross_warmup_and_uptrend():
     signals = golden_cross(prices)
     assert signals.iloc[:199].isna().all().all()
     assert (signals.iloc[199:] == 1).all().all()
+
+
+def test_momentum_warmup_and_uptrend():
+    dates = pd.bdate_range("2020-01-01", periods=300)
+    prices = pd.DataFrame({"A": range(1, 301)}, index=dates, dtype=float)
+    signals = momentum(prices)
+    assert signals.iloc[:252].isna().all().all()
+    assert (signals.iloc[252:] == 1).all().all()
+
 
