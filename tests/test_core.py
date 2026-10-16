@@ -8,6 +8,8 @@ from data import load_prices, validate_prices
 from mean_reversion import mean_reversion
 from metrics import summarize
 from run import analyze
+import pandas as pd
+from strategies import golden_cross
 
 
 @pytest.fixture(scope="module")
@@ -146,3 +148,12 @@ def test_mean_reversion_zero_gain_loss(prices):
 def test_mean_reversion_invalid_parameters(prices, options):
     with pytest.raises(ValueError):
         mean_reversion(prices, **options)
+
+
+def test_golden_cross_warmup_and_uptrend():
+    dates = pd.bdate_range("2020-01-01", periods=250)
+    prices = pd.DataFrame({"A": range(1, 251)}, index=dates, dtype=float)
+    signals = golden_cross(prices)
+    assert signals.iloc[:199].isna().all().all()
+    assert (signals.iloc[199:] == 1).all().all()
+
