@@ -140,8 +140,8 @@ for calculations and two chart windows; it does not save them:
 .venv/bin/python -B run.py data --phase2 --risk-free 0.02
 ```
 
-Here, `0.02` is a 2% illustration, not an observed Treasury or SOFR rate. Replace
-it with your approved annual decimal rate. A historical-period average Treasury
+Here, `0.02` is the user-approved 2% illustration, not an observed Treasury or SOFR
+rate. Replace it only when a different rate is selected. A historical-period average Treasury
 yield can be used as a constant proxy, but must be obtained and selected explicitly.
 Phase 2 rejects a missing rate. It supports a constant rate so the optimizer's
 Sharpe definition matches Phase 1; it does not accept a time-varying rate series.
