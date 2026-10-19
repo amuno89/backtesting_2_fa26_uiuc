@@ -8,9 +8,10 @@ To make changes, create a new branch for your changes, commit the changes to tha
 ## Current work
 
 This is a small, offline backtesting foundation with one entry point: `run.py`.
-The command-line runner uses buy-and-hold; RSI mean reversion is available through
-the same Python workflow. A risk-free input has not been selected.
-Completed coding work goes to `zy066299-Kevin-Zhao`
+The command-line runner uses buy-and-hold, or raw-asset portfolios with `--phase2`.
+RSI mean reversion and Huixin's strategies use the same Python workflow.
+A risk-free rate must be supplied explicitly; no rate is downloaded or assumed.
+Completed coding work goes to `Kevin-Mean-revision`
 and then through a pull request into `main`.
 
 - `run.py` loads the data once, calls the calculations, and returns their results.
@@ -20,13 +21,15 @@ and then through a pull request into `main`.
   compares each ticker with buy-and-hold over the same dates.
 - `metrics.py` calculates performance statistics from a daily return table.
 - `mean_reversion.py` returns RSI-based signals independently of Golden Cross.
+- `strategies.py` contains Huixin's Golden Cross and momentum rules.
+- `compare.py` compares strategy metrics over a shared evaluation period.
+- `portfolio.py` combines daily returns into portfolios and finds the frontier.
+- `plots.py` draws equity curves, the correlation heatmap, and the frontier.
 - `tests/test_core.py` checks these functions against existing local observations.
 
-Other strategies, plots, and portfolio analysis will be added
-only when their required choices and scope are supplied. Each file keeps the role
-in the agreed plan. All source, tests, comments, and blank lines combined must stay
-below 500 lines. The complete mean-reversion addition, including tests, must add
-no more than 100 code lines.
+Each file keeps its role across phases. All source, tests, comments, and blank
+lines combined must stay at or below 600 lines, with at most 300 added for Phase 2.
+The earlier mean-reversion addition retains its separate 100-added-line limit.
 
 ## Run the current baseline
 
@@ -117,15 +120,108 @@ table with the same dates and columns. Passing that function to `analyze` uses t
 existing backtest and metrics. Without it, both return tables contain the baseline;
 `benchmark_only=True` means no selected strategy has been evaluated.
 
-When requested, Phase 2 will pass `asset_returns` to `portfolio.py`, and Phase 3
-will pass the approved strategy-return tables to the same portfolio functions.
+Phase 2 passes the baseline's `asset_returns` to `analyze_portfolios` in
+`portfolio.py`. Do not pass a strategy backtest's shortened warm-up window when
+you intend to use the full raw-asset history. Phase 3 can later pass approved,
+aligned strategy-return tables to the same portfolio function.
 Both phases can use `summarize` with portfolio names as columns and `equity_curve`
 for growth calculations. The matched evaluation dates make comparisons fair;
 `prices` retains the full history when an explicitly different period is required.
 
-The portfolio and plotting modules are not implemented
-yet. Phase 3 must not mistake a benchmark-only result for a selected strategy or
+Phase 3 is not implemented. It must not mistake a benchmark-only result for a selected strategy or
 claim diversification across different strategies when only one is supplied.
+
+## Run Phase 2
+
+Use the same environment and approved data folder. This command explicitly asks
+for calculations and two chart windows; it does not save them:
+
+```sh
+.venv/bin/python -B run.py data --phase2 --risk-free 0.02
+```
+
+Here, `0.02` is a 2% illustration, not an observed Treasury or SOFR rate. Replace
+it with your approved annual decimal rate. A historical-period average Treasury
+yield can be used as a constant proxy, but must be obtained and selected explicitly.
+Phase 2 rejects a missing rate. It supports a constant rate so the optimizer's
+Sharpe definition matches Phase 1; it does not accept a time-varying rate series.
+
+The runner first calls the existing baseline, then passes its raw-asset returns
+to `analyze_portfolios`. There are no strategy signals or warm-up losses in this
+Phase 2 sample. Every asset and comparison uses exactly the same dates.
+
+| Returned table | Rows and columns |
+|---|---|
+| `asset_summary` | Ten assets × existing metrics plus `expected_return` |
+| `correlation`, `covariance` | Ten assets × ten assets, in the original ticker order |
+| `correlation_pairs` | Least and most correlated distinct pairs, in that order |
+| `simulation_weights`, `simulation` | 3,000 portfolios × asset weights or three statistics |
+| `frontier_weights`, `frontier` | 40 optimized points × weights or statistics |
+| `comparison_weights`, `comparison` | Four named portfolios × weights or statistics |
+| `comparison_returns` | Original return dates × four named portfolios |
+| `comparison_summary` | Four portfolios × existing metrics plus `expected_return` |
+
+The three statistics are arithmetic expected return, annualized volatility, and
+Sharpe. `period` and `risk_free` keep the dates and rate input with the result.
+Weights are nonnegative and sum to one. The random seed is 42, so rerunning the
+same inputs produces the same 3,000 simulated allocations. These are alternative
+weights applied to existing returns, not generated market observations.
+
+### How to read the charts
+
+The heatmap compares daily raw-asset returns. Correlation near 1 means the assets
+often move together; a smaller value suggests more diversification potential.
+The printed pairs exclude self-pairs and count each pair once. "Least" means the
+smallest signed correlation, not the correlation nearest zero. Sector differences
+and overlapping ETF holdings can help explain patterns, but correlation alone
+does not establish their cause.
+
+For the approved January 5, 2010–September 25, 2026 return sample, SPY/QQQ
+is the most correlated pair (0.930), and XOM/WMT is the least (0.213). Shared
+U.S. equity exposure is a plausible explanation for the first pair; different
+business drivers may help explain the second. These are interpretations, not
+causal findings, and the correlations can change with the evaluation period.
+
+Each red dot on the frontier chart is one simulated portfolio. Horizontal position
+is annualized standard deviation; vertical position is arithmetic expected return.
+The green line comes from constrained optimization, not from joining random dots.
+Its targets begin at the minimum-variance portfolio, keeping only the upper branch.
+The four black marker shapes and their legend entries identify:
+
+- Minimum variance: the lowest modeled volatility under the weight constraints.
+- Maximum Sharpe: the highest modeled excess return per unit of volatility.
+- Equal weight: 10% in each asset, without fitted allocation weights.
+- SPY: the single-index comparison, using the same dates and rate input.
+
+The legend includes each portfolio's Sharpe ratio; Sharpe is not a chart axis.
+Lower modeled volatility does not guarantee smaller drawdowns or better future
+returns. Low correlation can help diversification, but the covariance and weights
+determine the combined portfolio's risk.
+
+### Calculations and limits
+
+Expected return is the daily arithmetic mean multiplied by 252. The existing
+`annualized_return` remains CAGR (compounded annual growth); it is reported in
+the summary but is not used as the frontier's vertical coordinate.
+`numpy.cov(..., rowvar=False, ddof=1) * 252` estimates annual sample covariance:
+columns represent assets and off-diagonal entries describe their joint movement.
+Portfolio variance is `weights @ covariance @ weights`; its square root is volatility.
+See [NumPy's covariance documentation](https://numpy.org/doc/stable/reference/generated/numpy.cov.html).
+
+The same Phase 1 risk-free conversion is used throughout: a constant annual rate
+becomes `(1 + rate) ** (1 / 252) - 1` per trading day. Sharpe is the annualized daily
+excess mean divided by annualized volatility. With a constant rate, excess-return
+volatility equals raw-return volatility. No cash interest is added to strategies.
+The optimizer requires positive portfolio risk and at least one positive expected
+excess return; otherwise it stops rather than presenting an undefined tangency.
+Solver failures and constraint violations also stop the analysis. The solver uses
+[SciPy SLSQP](https://docs.scipy.org/doc/scipy/reference/optimize.minimize-slsqp.html).
+
+Fixed portfolio weights imply daily rebalancing, unlike letting initial asset
+weights drift. Costs are excluded. Weights are fitted and evaluated on the same
+history, so these are in-sample estimates, not an out-of-sample trading result.
+`plot_portfolios` returns two figures in memory; only the explicitly invoked CLI
+shows them. Nothing exports files or refreshes data automatically.
 
 ## Existing data
 
@@ -180,3 +276,9 @@ BACKTEST_DATA=data .venv/bin/python -B -m pytest -p no:cacheprovider -q
 Tests skip if that input is not supplied;
 a skipped suite is not a verified analysis. The tests use existing market observations
 and in-memory test positions, and do not create or save market data.
+
+For a headless environment, set `MPLBACKEND=Agg` when running the tests. This
+renders charts without opening windows. The Phase 2 checks cover covariance,
+weight constraints, shared Sharpe/volatility definitions, SPY alignment,
+reproducible simulations, chart rendering, and invalid inputs. The 2% rate in
+these checks tests the formulas only; it is not a selected market assumption.
