@@ -27,12 +27,25 @@ def analyze(data_folder, strategy=None, risk_free=None):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Run the offline buy-and-hold baseline.")
+    parser = argparse.ArgumentParser(description="Run offline backtesting or raw-asset portfolios.")
     parser.add_argument("data_folder", help="Path to the approved existing dataset")
     parser.add_argument("--risk-free", type=float, help="Explicit annual decimal rate")
+    parser.add_argument("--phase2", action="store_true", help="Analyze raw-asset portfolios and show charts")
     args = parser.parse_args()
+    if args.phase2 and args.risk_free is None:
+        parser.error("Phase 2 requires an explicit --risk-free annual rate.")
     try:
         result = analyze(args.data_folder, risk_free=args.risk_free)
+        if args.phase2:
+            from portfolio import analyze_portfolios
+            from plots import plot_portfolios
+            import matplotlib.pyplot as plt
+            portfolios = analyze_portfolios(result["asset_returns"], args.risk_free)
+            for name in ["asset_summary", "correlation_pairs", "comparison_summary", "comparison_weights"]:
+                print(name, "\n", portfolios[name].to_string())
+            plot_portfolios(portfolios)
+            plt.show()
+            return
     except (ValueError, FileNotFoundError, KeyError) as error:
         parser.error(str(error))
     print("Buy-and-hold baseline (no trading strategy selected)")

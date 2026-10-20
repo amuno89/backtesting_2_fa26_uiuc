@@ -8,6 +8,7 @@ from data import load_prices, validate_prices
 from mean_reversion import mean_reversion
 from metrics import summarize
 from run import analyze
+from portfolio import analyze_portfolios
 import pandas as pd
 from strategies import golden_cross, momentum
 
@@ -148,6 +149,48 @@ def test_mean_reversion_zero_gain_loss(prices):
 def test_mean_reversion_invalid_parameters(prices, options):
     with pytest.raises(ValueError):
         mean_reversion(prices, **options)
+
+
+def test_portfolio_calculations(prices):
+    baseline = analyze(os.environ["BACKTEST_DATA"])
+    returns = baseline["asset_returns"]
+    original = returns.copy()
+    result = analyze_portfolios(returns, 0.02)  # Formula check, not a selected market rate.
+    np.testing.assert_allclose(result["covariance"], returns.cov() * 252)
+    np.testing.assert_allclose(np.diag(result["covariance"]), returns.std(ddof=1) ** 2 * 252)
+    assert result["correlation_pairs"].notna().all()
+    for name in ["simulation", "frontier", "comparison"]:
+        weights = result[name + "_weights"]
+        assert weights.columns.equals(returns.columns)
+        assert weights.ge(-1e-8).all(axis=None) and weights.le(1 + 1e-8).all(axis=None)
+        np.testing.assert_allclose(weights.sum(axis=1), 1, atol=1e-8)
+    assert len(result["simulation"]) == 3000
+    comparison = result["comparison"]
+    expected = summarize(result["comparison_returns"], 0.02)
+    np.testing.assert_allclose(comparison["sharpe_ratio"], expected["sharpe_ratio"])
+    np.testing.assert_allclose(comparison["annualized_volatility"], expected["annualized_volatility"])
+    assert result["comparison_returns"]["SPY"].equals(returns["SPY"])
+    assert comparison.loc["Minimum variance", "annualized_volatility"] <= comparison["annualized_volatility"].min() + 1e-8
+    assert comparison.loc["Maximum Sharpe", "sharpe_ratio"] >= result["simulation"]["sharpe_ratio"].max() - 1e-8
+    assert comparison.loc["Maximum Sharpe", "sharpe_ratio"] >= result["asset_summary"]["sharpe_ratio"].max() - 1e-8
+    assert result["frontier"]["expected_return"].is_monotonic_increasing
+    repeated = analyze_portfolios(returns, 0.02)
+    assert result["simulation_weights"].equals(repeated["simulation_weights"])
+    assert returns.equals(original)
+    from plots import plot_portfolios
+    import matplotlib.pyplot as plt
+    for figure in plot_portfolios(result):
+        figure.canvas.draw()
+        plt.close(figure)
+
+
+@pytest.mark.parametrize("problem", ["rate", "dates", "missing", "constant"])
+def test_invalid_portfolio_inputs(prices, problem):
+    returns = prices.pct_change(fill_method=None).iloc[1:]
+    samples = {"rate": returns, "dates": returns.iloc[::-1],
+               "missing": returns.mask(returns == returns.iloc[0]), "constant": returns * 0}
+    with pytest.raises(ValueError):
+        analyze_portfolios(samples[problem], None if problem == "rate" else 0.02)
 
 
 def test_golden_cross_warmup_and_uptrend():

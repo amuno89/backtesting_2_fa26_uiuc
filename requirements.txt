@@ -3,3 +3,4 @@ pandas
 pandas-market-calendars
 pytest
 matplotlib
+scipy
