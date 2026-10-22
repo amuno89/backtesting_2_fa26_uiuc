@@ -133,6 +133,17 @@ claim diversification across different strategies when only one is supplied.
 
 ## Run Phase 2
 
+### Sharpe ratio graph
+
+![Efficient frontier with Sharpe ratios for minimum variance, maximum Sharpe, equal weight, and SPY portfolios](docs/sharpe_ratio.png)
+
+Saved on October 22, 2026 using the approved January 5, 2010–September 25, 2026
+return sample and an illustrative 2% annual risk-free rate. Sharpe ratios appear
+in the legend; the axes show risk and return. This is a saved snapshot, updated
+only on request, not a live chart.
+
+### Run the analysis
+
 Use the same environment and approved data folder. This command explicitly asks
 for calculations and two chart windows; it does not save them:
 
