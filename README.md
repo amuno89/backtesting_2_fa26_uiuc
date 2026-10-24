@@ -137,10 +137,15 @@ claim diversification across different strategies when only one is supplied.
 
 ![Efficient frontier with Sharpe ratios for minimum variance, maximum Sharpe, equal weight, and SPY portfolios](docs/sharpe_ratio.png)
 
-Saved on October 22, 2026 using the approved January 5, 2010–September 25, 2026
-return sample and an illustrative 2% annual risk-free rate. Sharpe ratios appear
-in the legend; the axes show risk and return. This is a saved snapshot, updated
-only on request, not a live chart.
+Updated on October 24, 2026 using the approved January 5, 2010–September 25, 2026
+return sample and an illustrative 2% annual risk-free rate. Point colors show
+simulated portfolio Sharpe ratios; black markers identify the four comparisons.
+The axes show risk and return, not Sharpe. This is a saved snapshot, updated only
+on request, not a live chart.
+
+Read the [Phase 2 visual report](docs/phase2_report.md) for the correlation
+heatmap, allocation weights, and interpretation. The maximum remains about 1.07
+for this sample and model; the graph correction does not improve investment returns.
 
 ### Run the analysis
 
@@ -193,8 +198,9 @@ U.S. equity exposure is a plausible explanation for the first pair; different
 business drivers may help explain the second. These are interpretations, not
 causal findings, and the correlations can change with the evaluation period.
 
-Each red dot on the frontier chart is one simulated portfolio. Horizontal position
-is annualized standard deviation; vertical position is arithmetic expected return.
+Each colored dot on the frontier chart is one simulated portfolio; its color shows
+Sharpe. Horizontal position is annualized standard deviation; vertical position is
+arithmetic expected return.
 The green line comes from constrained optimization, not from joining random dots.
 Its targets begin at the minimum-variance portfolio, keeping only the upper branch.
 The four black marker shapes and their legend entries identify:
