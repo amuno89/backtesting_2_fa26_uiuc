@@ -179,7 +179,11 @@ def test_portfolio_calculations(prices):
     assert returns.equals(original)
     from plots import plot_portfolios
     import matplotlib.pyplot as plt
-    for figure in plot_portfolios(result):
+    figures = plot_portfolios(result)
+    np.testing.assert_allclose(figures[1].axes[0].collections[0].get_array(), result["simulation"]["sharpe_ratio"])
+    assert "In-sample" in figures[1].axes[0].get_title()
+    assert f"Annual risk-free input: {result['risk_free']:.2%}" in figures[1].axes[0].get_title()
+    for figure in figures:
         figure.canvas.draw()
         plt.close(figure)
 
@@ -193,19 +197,13 @@ def test_invalid_portfolio_inputs(prices, problem):
         analyze_portfolios(samples[problem], None if problem == "rate" else 0.02)
 
 
-def test_golden_cross_warmup_and_uptrend():
-    dates = pd.bdate_range("2020-01-01", periods=250)
-    prices = pd.DataFrame({"A": range(1, 251)}, index=dates, dtype=float)
-    signals = golden_cross(prices)
-    assert signals.iloc[:199].isna().all().all()
-    assert (signals.iloc[199:] == 1).all().all()
-
-
-def test_momentum_warmup_and_uptrend():
-    dates = pd.bdate_range("2020-01-01", periods=300)
-    prices = pd.DataFrame({"A": range(1, 301)}, index=dates, dtype=float)
-    signals = momentum(prices)
-    assert signals.iloc[:252].isna().all().all()
-    assert (signals.iloc[252:] == 1).all().all()
+@pytest.mark.parametrize("strategy, length, warmup", [(golden_cross, 250, 199),
+                                                    (momentum, 300, 252)])
+def test_strategy_warmup_and_uptrend(strategy, length, warmup):
+    dates = pd.bdate_range("2020-01-01", periods=length)
+    prices = pd.DataFrame({"A": range(1, length + 1)}, index=dates, dtype=float)
+    signals = strategy(prices)
+    assert signals.iloc[:warmup].isna().all().all()
+    assert (signals.iloc[warmup:] == 1).all().all()
 
 

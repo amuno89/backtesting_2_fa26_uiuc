@@ -22,15 +22,17 @@ def plot_portfolios(result):
     frontier, ax = plt.subplots(figsize=(10, 7), layout="constrained")
     cloud = result["simulation"]
     curve = result["frontier"]
-    ax.scatter(cloud["annualized_volatility"], cloud["expected_return"],
-               color="firebrick", s=9, alpha=0.25, label="3,000 simulated portfolios")
+    points = ax.scatter(cloud["annualized_volatility"], cloud["expected_return"],
+                        c=cloud["sharpe_ratio"], cmap="viridis", s=9, alpha=0.7,
+                        label="3,000 simulated portfolios")
+    frontier.colorbar(points, ax=ax, label="Simulated portfolio Sharpe ratio")
     ax.plot(curve["annualized_volatility"], curve["expected_return"],
             color="forestgreen", label="Optimized efficient frontier")
     for (name, row), marker in zip(result["comparison"].iterrows(), ["s", "*", "D", "^"]):
         ax.scatter(row["annualized_volatility"], row["expected_return"], marker=marker,
                    s=110, color="black", label=f"{name}: Sharpe {row['sharpe_ratio']:.2f}")
     ax.set(xlabel="Annualized standard deviation", ylabel="Annualized arithmetic return",
-           title=f"Efficient frontier | {result['period']}\nAnnual risk-free input: {result['risk_free']:.2%}")
+           title=f"In-sample efficient frontier | {result['period']}\nAnnual risk-free input: {result['risk_free']:.2%}")
     ax.xaxis.set_major_formatter(PercentFormatter(1))
     ax.yaxis.set_major_formatter(PercentFormatter(1))
     ax.legend(loc="upper left", fontsize=9)
