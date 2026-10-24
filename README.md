@@ -3,7 +3,7 @@ Repository for Backtesting group 2 for Fall 2026 semester's Financial Engineerin
 
 The tickers being used for phase 1 are: SPY, QQQ, IWM, AAPL, JPM, XOM, JNJ, PG, WMT, CAT
 
-To make changes, create a new branch for your changes, commit the changes to that branch, and then create a pull request to merge the branch with `main`.
+Commit completed work to `Kevin-Mean-revision` and submit a pull request into `main`.
 
 ## Current work
 
@@ -30,6 +30,8 @@ and then through a pull request into `main`.
 Each file keeps its role across phases. All source, tests, comments, and blank
 lines combined must stay at or below 600 lines, with at most 300 added for Phase 2.
 The earlier mean-reversion addition retains its separate 100-added-line limit.
+All charts and their interpretations are presented in this README. The `docs/`
+folder contains supporting PNG images only; there is no separate visual report.
 
 ## Run the current baseline
 
@@ -122,8 +124,9 @@ existing backtest and metrics. Without it, both return tables contain the baseli
 
 Phase 2 passes the baseline's `asset_returns` to `analyze_portfolios` in
 `portfolio.py`. Do not pass a strategy backtest's shortened warm-up window when
-you intend to use the full raw-asset history. Phase 3 can later pass approved,
-aligned strategy-return tables to the same portfolio function.
+you intend to use the full raw-asset history. Future Phase 3 integration must align
+approved strategy returns and supply a matching benchmark column before reusing
+the portfolio function.
 Both phases can use `summarize` with portfolio names as columns and `equity_curve`
 for growth calculations. The matched evaluation dates make comparisons fair;
 `prices` retains the full history when an explicitly different period is required.
@@ -143,9 +146,117 @@ simulated portfolio Sharpe ratios; black markers identify the four comparisons.
 The axes show risk and return, not Sharpe. This is a saved snapshot, updated only
 on request, not a live chart.
 
-Read the [Phase 2 visual report](docs/phase2_report.md) for the correlation
-heatmap, allocation weights, and interpretation. The maximum remains about 1.07
-for this sample and model; the graph correction does not improve investment returns.
+The maximum estimated Sharpe is **1.073**, compared with **0.898** for equal
+weights and **0.747** for SPY. These are historical estimates, not forecasts or
+a universal ceiling. The graph correction does not improve investment returns.
+
+| Portfolio | Arithmetic return/year | Volatility/year | Sharpe |
+|---|---:|---:|---:|
+| Minimum variance | 12.84% | 13.57% | 0.801 |
+| Maximum Sharpe | 20.36% | 17.13% | 1.073 |
+| Equal weight | 16.55% | 16.22% | 0.898 |
+| SPY | 14.72% | 17.05% | 0.747 |
+
+Equal weight holds 10% in each asset; SPY is the single-index comparison.
+Each dot is one of 3,000 allocations; its color measures Sharpe. The green line
+comes from constrained optimization, not from joining the best random dots.
+It traces the upper frontier, starting at the minimum-variance portfolio.
+Within this mean–variance model, a risk-averse investor prefers the frontier:
+least variance for a target return, or highest return for a given risk. The chosen
+point depends on risk tolerance. Maximum Sharpe does not mean minimum risk.
+See [CFA Institute's portfolio risk and return explanation](https://www.cfainstitute.org/insights/professional-learning/refresher-readings/2026/portfolio-risk-return-part-1).
+
+### Correlation and diversification
+
+![Daily raw-asset return correlations for the approved historical sample](docs/asset_correlation.png)
+
+The heatmap uses the same **4,207 daily returns** as the frontier. Correlation
+near 1 means returns tend to move together. The checks below exclude self-pairs
+and count each distinct pair once; "least" means the smallest signed value.
+
+| Correlation check | Result |
+|---|---:|
+| Highest pair: SPY / QQQ | 0.930 |
+| Second-highest pair: SPY / IWM | 0.882 |
+| Lowest pair: XOM / WMT | 0.213 |
+| Median of the 45 distinct pairs | 0.390 |
+| Pairs above 0.80 | 2 / 45 |
+| Negative pairs | 0 / 45 |
+
+The 0.80 level is a descriptive flag, not an exclusion rule. Shared U.S. equity
+exposure may explain the highly correlated ETF pairs; different business drivers
+may help explain XOM/WMT. These are interpretations, not causal findings, and
+correlations can change with the period.
+
+Lower correlations help all else equal; negative correlation is not required.
+Returns, individual volatilities, and weights also determine portfolio risk.
+For the maximum-Sharpe weights, the weighted average individual volatility is
+23.89%, while portfolio volatility is 17.13%. Their ratio is **1.395**.
+The former is the hypothetical volatility if every pair had correlation +1,
+with weights and individual volatilities unchanged. This is a mathematical
+comparison, not another observed portfolio or a forecast.
+
+Perfectly positively correlated assets offer no correlation-based diversification
+benefit. They can still be held together: identical return streams can share a
+weight without changing portfolio results. Lower volatility also does not
+guarantee smaller drawdowns or better future returns.
+
+### Why 1.07 is not just an ETF-overlap problem
+
+| Asset | Maximum-Sharpe weight |
+|---|---:|
+| AAPL | 36.29% |
+| JNJ | 23.36% |
+| WMT | 23.32% |
+| CAT | 15.81% |
+| JPM | 1.06% |
+| QQQ | 0.17% |
+| SPY | 0.00% |
+| IWM | 0.00% |
+| XOM | 0.00% |
+| PG | 0.00% |
+
+Weights are rounded; tiny numerical residuals appear as zero. The optimizer
+already assigns almost no weight to the index ETFs. The top three allocations
+total **82.96%**, so the portfolio remains concentrated.
+
+Because zero weights are allowed, removing an asset cannot increase the
+theoretical best in-sample Sharpe: it only narrows the available choices.
+The maximum depends on estimated returns and covariances, the sample, the
+risk-free input, and the long-only constraints. A matched comparison is more
+informative than calling 1.07 "good" or "not great" on its own.
+
+### Proposed basket for review
+
+**Proposal only: no tickers changed, new prices downloaded, or candidate results
+calculated.** Keep ten assets and the SPY benchmark. Retain SPY and the seven
+individual stocks; replace QQQ and IWM with two different asset exposures:
+
+| Proposed change | Reason to test it | Limitation |
+|---|---|---|
+| QQQ → IEF | Add U.S. Treasury bonds with 7–10 years to maturity | Bond prices can fall when yields rise; lower equity correlation must be measured |
+| IWM → IAU | Add exposure to physical gold through a gold trust | Gold can be volatile; negative equity correlation is not assumed |
+
+These exposure descriptions come from [iShares IEF](https://www.ishares.com/us/products/239456/ishares-7-10-year-treasury-bond-etf)
+and [iShares IAU](https://www.ishares.com/us/products/239561/ishares-gold-trust).
+The diversification benefit is a hypothesis to test, not a result supplied by
+those sources. Both products launched before 2010; complete approved price
+coverage still needs checking.
+
+Proposed order: **SPY, IEF, IAU, AAPL, JPM, XOM, JNJ, PG, WMT, CAT**.
+This changes the original equity-only universe and removes QQQ/IWM exposures.
+Replacing assets does not guarantee a higher Sharpe. The proposal aims to test
+different return drivers, rather than selecting assets to force a higher result.
+
+After approval of the basket and its data, compare it with the original basket
+using the same dates, 2% illustrative rate, 252-day annualization, and long-only
+weights. Reuse the Phase 1 cleaning and return definitions; keep the original
+approved dataset intact. Check complete aligned observations and weights summing
+to one within `1e-8`. Report changes in maximum Sharpe, minimum volatility,
+volatility at matched feasible returns, pair correlations, and the largest weight.
+Keep equal-weight and SPY comparisons, and report deterioration as well as gains.
+Any data acquisition or saved output needs an explicit request; this proposal
+does not add a download or export step to the code.
 
 ### Run the analysis
 
@@ -183,38 +294,6 @@ Weights are nonnegative and sum to one. The random seed is 42, so rerunning the
 same inputs produces the same 3,000 simulated allocations. These are alternative
 weights applied to existing returns, not generated market observations.
 
-### How to read the charts
-
-The heatmap compares daily raw-asset returns. Correlation near 1 means the assets
-often move together; a smaller value suggests more diversification potential.
-The printed pairs exclude self-pairs and count each pair once. "Least" means the
-smallest signed correlation, not the correlation nearest zero. Sector differences
-and overlapping ETF holdings can help explain patterns, but correlation alone
-does not establish their cause.
-
-For the approved January 5, 2010–September 25, 2026 return sample, SPY/QQQ
-is the most correlated pair (0.930), and XOM/WMT is the least (0.213). Shared
-U.S. equity exposure is a plausible explanation for the first pair; different
-business drivers may help explain the second. These are interpretations, not
-causal findings, and the correlations can change with the evaluation period.
-
-Each colored dot on the frontier chart is one simulated portfolio; its color shows
-Sharpe. Horizontal position is annualized standard deviation; vertical position is
-arithmetic expected return.
-The green line comes from constrained optimization, not from joining random dots.
-Its targets begin at the minimum-variance portfolio, keeping only the upper branch.
-The four black marker shapes and their legend entries identify:
-
-- Minimum variance: the lowest modeled volatility under the weight constraints.
-- Maximum Sharpe: the highest modeled excess return per unit of volatility.
-- Equal weight: 10% in each asset, without fitted allocation weights.
-- SPY: the single-index comparison, using the same dates and rate input.
-
-The legend includes each portfolio's Sharpe ratio; Sharpe is not a chart axis.
-Lower modeled volatility does not guarantee smaller drawdowns or better future
-returns. Low correlation can help diversification, but the covariance and weights
-determine the combined portfolio's risk.
-
 ### Calculations and limits
 
 Expected return is the daily arithmetic mean multiplied by 252. The existing
@@ -237,8 +316,15 @@ Solver failures and constraint violations also stop the analysis. The solver use
 Fixed portfolio weights imply daily rebalancing, unlike letting initial asset
 weights drift. Costs are excluded. Weights are fitted and evaluated on the same
 history, so these are in-sample estimates, not an out-of-sample trading result.
+The chosen stocks also represent a selected surviving universe; this exercise
+does not establish how an investor would have selected them at the start of 2010.
 `plot_portfolios` returns two figures in memory; only the explicitly invoked CLI
 shows them. Nothing exports files or refreshes data automatically.
+
+All numerical evidence above comes from the approved local inputs through
+[run.py](run.py), [portfolio.py](portfolio.py), and [metrics.py](metrics.py).
+The two PNG snapshots were saved on explicit request. The
+[existing-data caveats](#existing-data) also apply to every displayed result.
 
 ## Existing data
 

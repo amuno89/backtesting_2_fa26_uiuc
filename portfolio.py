@@ -16,15 +16,15 @@ def analyze_portfolios(daily_returns, risk_free, benchmark="SPY"):
             or not dates.is_monotonic_increasing or daily_returns.columns.has_duplicates):
         raise ValueError("Return dates and asset labels must be unique and ordered.")
     asset_summary = summarize(daily_returns, risk_free)
-    mean_return = daily_returns.mean() * TRADING_DAYS
+    mean_return = daily_returns.mean() * TRADING_DAYS  # Arithmetic return, not compound growth.
     excess_mean = excess_returns(daily_returns, risk_free).mean() * TRADING_DAYS
-    # Each column is an asset. Sample covariance includes how assets move together.
+    # Columns are assets; ddof=1 estimates sample covariance, including joint movement.
     covariance = np.cov(daily_returns.to_numpy(), rowvar=False, ddof=1) * TRADING_DAYS
     count = len(mean_return)
     equal_weights = np.full(count, 1 / count)
 
     def variance(weights):
-        return weights @ covariance @ weights
+        return weights @ covariance @ weights  # Combine individual risks and every pair's joint risk.
 
     def solve(objective, target=None, start=equal_weights):
         constraints = [{"type": "eq", "fun": lambda weights: weights.sum() - 1}]
@@ -48,7 +48,7 @@ def analyze_portfolios(daily_returns, risk_free, benchmark="SPY"):
     # Trace only the upper frontier: returns at or above the minimum-risk portfolio.
     targets = np.linspace(minimum @ mean_return, mean_return.max(), 40)
     frontier = [solve(variance, target) for target in targets]
-    generator = np.random.default_rng(42)
+    generator = np.random.default_rng(42)  # Repeatable allocations of existing returns, not new prices.
     random_weights = generator.dirichlet(np.ones(count), size=3000)
     comparison = pd.DataFrame([minimum, maximum, equal_weights,
                                (daily_returns.columns == benchmark).astype(float)],
@@ -57,7 +57,7 @@ def analyze_portfolios(daily_returns, risk_free, benchmark="SPY"):
     if benchmark not in daily_returns.columns:
         raise ValueError("The benchmark must be a column in the same return table.")
     correlation = daily_returns.corr()
-    distinct_pairs = np.triu(np.ones((count, count)), k=1).astype(bool)
+    distinct_pairs = np.triu(np.ones((count, count)), k=1).astype(bool)  # Exclude repeats and self-pairs.
     pairs = correlation.where(distinct_pairs).stack()
     pairs = pairs.dropna().sort_values()
     asset_summary["expected_return"] = mean_return
