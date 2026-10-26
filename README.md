@@ -337,6 +337,9 @@ one strategy; the fourth combines all **30 streams**. A weight assigns capital
 to that strategy account, including its cash days. The existing trading rules
 and the ten approved tickers are unchanged.
 
+The [three proposed combinations](#proposed-strategy-combinations) below describe
+the next experiments. They are not implemented or included in these frontier results.
+
 All four analyses use **3,955 daily returns, January 4, 2011–September 25, 2026**,
 and the approved **2% illustrative annual risk-free rate**. Signals are calculated
 from the full Phase 1 price history. Returns are aligned after the longest
@@ -481,6 +484,95 @@ Checks: all frontier weights sum to one and meet their target returns within
 independent convex reformulation reproduced each maximum Sharpe within `1e-8`.
 These checks validate the calculations, not future performance. The existing
 data-quality and selected-universe limitations below still apply.
+
+### Proposed strategy combinations
+
+These three research proposals aim for practical trading and returns after costs,
+with acceptable volatility and drawdown. They target quicker participation in
+rebounds and quicker exposure reduction during continued declines. Their response
+speed, returns, and diversification have not been tested; no new results are claimed.
+
+All three use the same ten approved tickers: **SPY, QQQ, IWM, AAPL, JPM, XOM,
+JNJ, PG, WMT, and CAT**. Each ticker has a maximum target allocation of **10% of
+total portfolio equity**, including all strategy accounts for that ticker.
+Unused allocations stay in cash and are not redistributed to the remaining
+active tickers. Positions are long-only, with no leverage. Decisions use completed
+daily observations and take effect on the following day's return, as in Phase 1.
+
+MACD is the 12-day exponential moving average minus the 26-day exponential moving
+average. An exponential average gives more weight to recent observations. The
+signal line is a 9-day exponential average of MACD. Here, "bullish MACD" means
+MACD is above its signal line; equality or a lower value means the condition is off.
+
+The channel thresholds are the highest adjusted close in the previous 20 trading
+days and the lowest adjusted close in the previous 10 trading days. Both exclude
+today's close and are recalculated daily. This is a closing-price variation of
+Donchian channels. Signals begin only after sufficient history is available.
+
+#### 1. MACD entry with an additional downside exit
+
+For each ticker, invest its **10% budget** while MACD is bullish and the adjusted
+close is at or above the previous 10-day lowest close. Otherwise hold that budget
+in cash. Re-enter when both conditions recover; a new 20-day high is not required.
+
+This provides two ways to reduce exposure: weakening MACD or a downside breakdown.
+It is the closest design match to the response goal, but bullish MACD can occur
+while prices are still falling. Repeated exits and re-entries can increase costs.
+
+#### 2. Independent MACD and breakout accounts
+
+For each ticker, assign **7% of portfolio equity to MACD and 3% to breakout**.
+Across ten tickers, the target budgets total 70% MACD and 30% breakout.
+
+- The MACD account invests while MACD is bullish and holds cash otherwise.
+- The breakout account enters when the close exceeds the previous 20-day highest
+  close. It holds until the close falls below the previous 10-day lowest close,
+  then returns to cash. Between those events, keep its existing position.
+
+The accounts act independently, so combined exposure to one ticker can be 0%,
+3%, 7%, or 10%. Most capital follows MACD, while a smaller account waits for an
+upside breakout. That account can enter a rebound late, and the two signals may
+still produce similar returns. Different rule names do not establish diversification.
+
+#### 3. Enter partially, increase after confirmation
+
+For each ticker, use these target allocations:
+
+1. From cash, invest **5% of portfolio equity** when candidate 1's entry conditions hold.
+2. Increase to **10%** when the close exceeds the previous 20-day highest close.
+   If this also happens on the entry day, the target can immediately be 10%.
+3. After increasing, retain 10% until MACD is no longer bullish or the close falls
+   below the previous 10-day lowest close. Either condition exits the entire
+   position, including a position still at 5%. The exit condition takes priority.
+4. After an exit, start again from the entry rule; do not keep the previous full-position state.
+
+This permits partial participation before breakout confirmation. However, some
+rebound gains may occur while half the budget remains in cash. Tracking the
+partial and full positions also requires more logic and testing.
+
+Candidates 1 and 3 are new hybrid rules using the listed indicators. Candidate 2
+combines the two strategies independently. None changes the existing Golden Cross,
+momentum, or RSI rules, and none is included in the four charts above.
+
+Ten capped budgets spread capital across the approved universe, but the ETFs
+overlap individual stocks and all positions remain US equities or cash. Active
+holdings can shrink when signals switch off. The 10% limit is a ticker limit,
+not a limit on a company's total exposure through direct holdings and ETFs.
+
+Proposed evaluation: test candidate 1 against an equal-budget MACD-only baseline,
+then compare candidate 2; consider candidate 3 if the simpler rules justify it.
+Define rebound and decline episodes before measuring entry and exit delays.
+Compare returns after trading costs, maximum drawdown, volatility, and effective
+holdings on matching dates, using earlier observations for any fitted choices.
+Use the existing equal-weight combined portfolio as a provisional stability
+reference. Transaction-cost modeling remains future work; the current results
+above exclude costs.
+
+Any implementation must reuse approved prices and shared backtest/metric functions,
+stay within **600 total code lines**, and keep Phase 2 within its 300-added-line
+limit. This README addition contains no implementation or new market data.
+Indicator background: [MACD](https://www.fidelity.com/learning-center/trading-investing/technical-analysis/technical-indicator-guide/macd)
+and [Donchian channels](https://www.tradingview.com/support/solutions/43000502253-donchian-channels-dc/).
 
 ## Existing data
 
