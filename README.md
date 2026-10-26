@@ -7,7 +7,8 @@ Commit completed work to `Kevin-Mean-revision` and submit a pull request into `m
 
 ## Current work
 
-This is a small, offline backtesting foundation with one entry point: `run.py`.
+This is a small, offline backtesting foundation. `run.py` handles the original phases;
+`experiment.py` explicitly runs the five-candidate allocation experiment.
 The command-line runner uses buy-and-hold, or raw-asset portfolios with `--phase2`.
 RSI mean reversion and Huixin's strategies use the same Python workflow.
 The [Phase 3 frontiers](#phase-3-strategy-frontiers) reuse these functions for
@@ -28,9 +29,14 @@ and then through a pull request into `main`.
 - `portfolio.py` combines daily returns into portfolios and finds the frontier.
 - `plots.py` draws equity curves, the correlation heatmap, and the frontier.
 - `tests/test_core.py` checks these functions against existing local observations.
+- `combinations.py` produces C1, C3, revised C4/C5, and C6 signals from the same prices.
+- `allocation.py` accounts for cash, trading costs, and monthly portfolio allocations.
+- `experiment.py` compares candidates, controls, fixed/dynamic weights, and removals.
+- `tests/test_combinations.py` and `tests/test_allocation.py` check the new rules and accounting.
 
 Each file keeps its role across phases. All source, tests, comments, and blank
-lines combined must stay at or below 600 lines, with at most 300 added for Phase 2.
+lines combined must stay at or below **950 lines**, approved on October 26, 2026.
+Phase 2 retains its 300-added-line limit and is unchanged by this experiment.
 The earlier mean-reversion addition retains its separate 100-added-line limit.
 All charts and their interpretations are presented in this README. The `docs/`
 folder contains supporting PNG images only; there is no separate visual report.
@@ -487,10 +493,11 @@ data-quality and selected-universe limitations below still apply.
 
 ### Proposed strategy combinations
 
-The original candidates below are comparison baselines. The
+The original candidate descriptions below preserve the design history. The
 [version 2 proposal and relationship map](#version-2-proposal-and-relationship-map)
-describe a different role for C4 and C5; the original allocation examples do not
-apply to those revised rules.
+describe the implemented experiment, including different roles for C4 and C5.
+The original allocation examples do not apply to those revised rules. See
+[running and testing version 2](#running-and-testing-version-2) for measured results.
 
 The retained shortlist is **C1, C3, C4, C5, and C6**. C4 replaces C2, whose MACD
 account could remain invested below the 10-day low. The labels preserve the earlier
@@ -591,9 +598,9 @@ high volatility after a fall may reduce participation in a sharp rebound.
 Research motivates investigating volatility management, but does not validate
 this particular rule: [Moreira and Muir](https://amoreira2.github.io/alan-moreira.github.io/VolPortfolios_published.pdf).
 
-All five are unimplemented combinations using the listed indicators. None changes
-the existing Golden Cross, momentum, or RSI rules, and none appears in the four
-frontier charts above.
+Version 2 below implements C1, C3, C6 and revised C4/C5; the original C4/C5 are
+also evaluated as controls. None changes the existing Golden Cross, momentum,
+or RSI rules, and none appears in the four frontier charts above.
 
 Ten capped budgets spread capital across the approved universe, but the ETFs
 overlap individual stocks and all positions remain US equities or cash. Active
@@ -639,14 +646,13 @@ Define rebound and decline episodes before measuring entry and exit delays.
 Compare returns after trading costs, maximum drawdown, volatility, and effective
 holdings on matching dates, using earlier observations for any fitted choices.
 Use the existing equal-weight combined portfolio as a provisional stability
-reference. Transaction-cost modeling remains future work; the current results
-above exclude costs.
+reference. The new experiment includes explicit illustrative trading costs;
+the earlier frontier results above still exclude costs.
 
 #### Dynamic weighting experiment
 
-Once the five candidates are implemented, test whether changing their allocations
-helps when their relative performance changes. This is a planned experiment;
-there are no dynamic-weighting results yet. Use two versions with the same
+The version 2 experiment tests whether changing allocations helps when the
+candidates' relative performance changes. It uses two versions with the same
 monthly rebalancing schedule:
 
 | Version | Target allocation among C1, C3, C4, C5, and C6 |
@@ -689,8 +695,8 @@ justify the extra trading and complexity. General background:
 [rebalancing and transaction costs](https://www.investor.gov/additional-resources/general-resources/publications-research/info-sheets/beginners-guide-asset).
 
 Any implementation must reuse approved prices and shared backtest/metric functions,
-stay within **600 total code lines**, and keep Phase 2 within its 300-added-line
-limit. This README addition contains no implementation or new market data.
+stay within **950 total code lines**, and keep Phase 2 within its 300-added-line
+limit. The experiment reuses the existing dataset and downloads no market data.
 Indicator background: [MACD](https://www.fidelity.com/learning-center/trading-investing/technical-analysis/technical-indicator-guide/macd)
 and [Donchian channels](https://www.tradingview.com/support/solutions/43000502253-donchian-channels-dc/).
 
@@ -699,8 +705,9 @@ and [Donchian channels](https://www.tradingview.com/support/solutions/4300050225
 The aim is to give the candidates different trading jobs. Several original
 candidates share their decisions and mainly change the amount invested.
 Changing their allocation weights alone cannot separate their weaknesses very much.
-The following version 2 remains a research proposal, not an implemented or
-validated improvement. Keep the original designs as comparison baselines.
+The following version 2 is now implemented as a research experiment. Successful
+software checks do not establish an investment improvement; compare the measured
+results below with the original designs and exposure controls.
 
 | Candidate | Proposed role or change | Main limitation | Possible compensation |
 |---|---|---|---|
@@ -717,7 +724,7 @@ C1, C3, and C6 still exit when MACD is no longer bullish or the downside thresho
 breaks. C3 and C6 are parallel sizing alternatives sharing C1's conditions.
 
 The largest change in trading behavior would come from revising C4 and C5:
-both original candidates depend substantially on C1. Revised C5 would use:
+both original candidates depend substantially on C1. Revised C5 uses:
 
 1. The previous close was below its then-current 20-day lower Bollinger band.
 2. Enter when the close returns inside the band, rises above the previous close,
@@ -733,7 +740,7 @@ remain outside bands during strong trends. Background:
 
 Solid arrows show data or calculation flow. Dotted arrows show shared trading
 conditions. C3 and C6 are not mandatory steps applied sequentially to every strategy.
-The new candidates and allocation stages in this map still need implementation.
+The allocation stage adds cost accounting around the existing Phase 1 timing convention.
 
 ```mermaid
 flowchart TD
@@ -785,13 +792,155 @@ These proposals may separate some trading behavior, but all remain long-only
 equities or cash. Cash can reduce some losses; it cannot profit directly from a
 falling underlying. ETF overlap and common market losses remain possible.
 
-Validation on October 26, 2026: the existing regression suite passed **28 tests**
-using the approved local dataset. This checks the current data loader, Phase 1
-backtest and metrics, existing strategies, and Phase 2 portfolio calculations and
-chart rendering. It does **not** test the five new candidates, costs, monthly
-allocation drift, or their combined performance: those components are not yet
-implemented. The existing codebase totals **600 lines**, including tests, comments,
-and blank lines; implementing the complete experiment requires a budget decision.
+#### Running and testing version 2
+
+Run the full experiment explicitly; it prints results and does not save datasets,
+charts, or logs. Repeat with `--cost-bps 0` or `--cost-bps 10` for cost sensitivity.
+
+```sh
+.venv/bin/python -B experiment.py data --cost-bps 5 --risk-free 0.02
+MPLBACKEND=Agg BACKTEST_DATA=data .venv/bin/python -B -m pytest -p no:cacheprovider -q
+```
+
+The approved price history supplies every indicator and return. MACD uses 12/26-day
+exponential averages and a 9-day signal, with `adjust=False`. All new signals wait
+until day 34. Bollinger bands use the 20-day mean plus/minus two population standard
+deviations (`ddof=0`); C6 uses the sample standard deviation of 20 raw-asset daily
+returns (`ddof=1`). The comparison begins after the first 252 price observations,
+matching Phase 3. Strategy states are computed using that earlier history.
+
+2011–2019 sets only the exposure-matched C1 scale: the fixed blend's average invested
+fraction divided by C1's, capped at one. Evaluation is January 2, 2020 through
+September 25, 2026. The scale is held constant afterward; it does not guarantee equal
+exposure in the later period. Dynamic rankings continue to use only the prior 63
+completed return observations. The accounts run continuously from 2011 and carry
+holdings into 2020; the later-period statistics do not restart every account in cash.
+This is a historical later-period evaluation,
+not an untouched holdout: the universe and history have already been explored.
+
+Costs of 0, 5, and 10 basis points per purchase or sale are illustrative inputs,
+not measured execution costs. Each candidate has a virtual account. On ordinary
+days, each account rebalances its ticker targets using its own capital; its share
+of total capital drifts. The first return interval of each month applies the
+allocation selected at the preceding month's final close. Ties share rank weights;
+before 63 returns exist, both versions use equal fifths at rebalances.
+
+Trading costs cover changes from signals, price drift, and allocation transfers.
+For pre-trade capital E, marked-to-market stock holdings D, and target fractions x,
+the accounting solves `N + fee * sum(abs(N*x - D)) = E` for post-cost capital N.
+This keeps purchases affordable. Offset trades across candidate accounts are not
+netted; their separate costs may exceed broker-level netted costs. Standalone net
+returns are used for ranking only; their costs are not charged again to the blend.
+Initial entry costs are included, cash earns zero, and final holdings are valued
+at the last close without a forced sale. The 2% annual Sharpe input is illustrative.
+
+The equal-weight asset control rebalances all ten ticker targets daily; it is not
+passive buy-and-hold. The Phase 1 control equally averages Golden Cross, momentum,
+and RSI signals, then rebalances daily. That control nets same-ticker signals into
+one account, whereas the new five-candidate blend retains separate virtual accounts.
+Original C4/C5 follow their earlier definitions. Removing a candidate redistributes
+capital equally across the other four at monthly rebalances; it does not select
+new tickers or refit an optimizer.
+
+The diagnostics compare long/cash switching dates for each ticker, using intersection
+divided by union relative to C1. They exclude sizing-only changes. They also measure
+mean returns and loss frequency on C1's worst 10% of evaluation days. Stress-day
+tables use days when the equal-weight raw-asset basket moves more than 1% up or down;
+these are daily participation checks, not a measurement of rebound detection delay.
+
+**Measured results:** January 2, 2020–September 25, 2026; 5 basis points one-way
+cost; 2% illustrative annual risk-free input. Annual return is compound growth,
+while Sharpe uses daily excess returns. Drawdown includes the evaluation's initial value.
+
+| Candidate or control | Annual return | Annual volatility | Sharpe | Maximum drawdown | Mean invested fraction |
+|---|---:|---:|---:|---:|---:|
+| C1 | 9.79% | 9.42% | 0.828 | -8.85% | 49.73% |
+| C3 | 7.98% | 7.73% | 0.776 | -6.63% | 42.67% |
+| Revised C4 | 8.26% | 7.73% | 0.809 | -6.63% | 46.21% |
+| Revised C5 | -2.15% | 6.50% | -0.607 | -24.44% | 8.43% |
+| C6 | 6.98% | 6.47% | 0.769 | -6.66% | 41.83% |
+| Original C4 | 9.37% | 8.54% | 0.860 | -7.34% | 48.67% |
+| Original C5 | 10.72% | 9.73% | 0.892 | -9.15% | 54.80% |
+| Five-candidate fixed blend | 6.19% | 6.25% | 0.676 | -8.86% | 37.82% |
+| Five-candidate dynamic blend | 6.15% | 6.76% | 0.624 | -9.30% | 39.97% |
+| Exposure-matched C1 | 7.69% | 7.40% | 0.771 | -6.99% | 39.06% |
+| Equal-weight assets, rebalanced daily | 19.42% | 18.46% | 0.947 | -31.68% | 100.00% |
+| Equal-signal Phase 1 blend | 9.04% | 12.02% | 0.616 | -24.99% | 54.56% |
+
+At this cost, the pre-2020 exposure control scales C1 to **78.54%** of its normal
+targets. The fixed blend has lower volatility than this control, but lower return
+and a deeper drawdown. Its lower risk cannot be attributed entirely to successful
+diversification: a large cash allocation also reduces market exposure.
+
+The revised C4 trades less than C1 and has a smaller drawdown, at the cost of a
+lower return. Revised C5 has a low return correlation with C1 (**0.111**) but loses
+money even before trading costs. Its different behavior does not establish a
+useful portfolio contribution. The original C5 performs better in this historical
+comparison, so replacing it is not supported by these results alone.
+
+| Fixed blend variant | Annual return | Sharpe | Maximum drawdown |
+|---|---:|---:|---:|
+| All five | 6.19% | 0.676 | -8.86% |
+| Remove C1 | 5.29% | 0.594 | -9.12% |
+| Remove C3 | 5.75% | 0.636 | -9.57% |
+| Remove C4 | 5.67% | 0.603 | -9.71% |
+| Remove C5 | 8.28% | 0.834 | -5.85% |
+| Remove C6 | 5.99% | 0.638 | -10.14% |
+
+Removing revised C5 improves return, Sharpe, and drawdown here. Removing C6 worsens
+all three relative to the full blend, supporting its retention in this particular
+comparison. These are diagnostic removals on the same evaluated history, not a
+validated selection rule for future trading. Redistributing weights also changes
+exposure: without C5, the average invested fraction rises to **45.12%**.
+
+| One-way cost assumption | Fixed annual return / Sharpe | Dynamic annual return / Sharpe | Without C5 annual return |
+|---|---:|---:|---:|
+| 0 basis points | 7.12% / 0.815 | 7.35% / 0.791 | 9.30% |
+| 5 basis points | 6.19% / 0.676 | 6.15% / 0.624 | 8.28% |
+| 10 basis points | 5.28% / 0.537 | 4.83% / 0.434 | 7.26% |
+
+Dynamic weighting does not demonstrate a robust improvement. At 5 basis points it
+has slightly lower return, lower Sharpe, and deeper drawdown than fixed weighting;
+at 10 basis points the gap increases. Its annual traded notional is about **18.78
+times portfolio value**, versus **17.35** for fixed weighting, counting purchases
+and sales. Frequent strategy trading remains a practical limitation.
+
+| Candidate | Entry/exit overlap with C1 | Average daily return on C1's worst 10% of days | Fraction losing on those days |
+|---|---:|---:|---:|
+| C1 | 100.00% | -0.98% | 100.00% |
+| C3 | 100.00% | -0.81% | 100.00% |
+| Revised C4 | 12.16% | -0.71% | 94.12% |
+| Revised C5 | 3.30% | -0.08% | 34.71% |
+| C6 | 100.00% | -0.69% | 100.00% |
+
+C3 and C6 reduce the amount exposed on some bad days but still lose alongside C1.
+Their correlations with C1 are **0.968** and **0.924**, respectively. C4 changes
+trading dates more substantially, yet still loses on most of C1's worst days.
+C5 offers more separation, but its negative standalone return and removal result
+show why low correlation alone is insufficient.
+
+On days when the raw basket rises over 1%, the fixed and dynamic blends return an
+average **0.51%** and **0.53%**; on days it falls over 1%, they return **-0.56%** and
+**-0.59%**. The raw basket averages **1.79%** and **-1.91%** on those respective
+day sets. The blends reduce daily downside participation while also missing much
+of the upside. These statistics do not prove rapid rebound detection.
+
+The full blend averages **6.73 active tickers**, versus **0.84** for standalone C5.
+After allowing for unequal invested weights, the fixed blend averages **5.83 effective
+tickers**, and the dynamic blend **5.70**. This count is the squared invested fraction
+divided by the sum of squared ticker weights; all-cash days count as zero.
+The 10% target cap prevents concentrating unused capital into a few ticker budgets,
+but it does not guarantee ten active holdings or eliminate company overlap inside ETFs.
+
+Validation on October 26, 2026: **38 tests passed**, including the existing Phase 1/2
+regressions and new signal/accounting checks. Tests cover historical-prefix
+invariance, warm-up, state retention, confirmed entries, downside exits, volatility
+sizing, initial fees, price-drift turnover, cash, monthly ranking, tied ranks, and
+allocation drift. Recorded fees match traded notional times the cost rate. All
+three cost scenarios completed end to end using the same approved inputs.
+The codebase totals **947 lines**, counting all source, tests, comments, and blank
+lines. Phase 2 source and existing tests are unchanged. No dataset was downloaded,
+refreshed, or saved by the experiment.
 
 ## Existing data
 
