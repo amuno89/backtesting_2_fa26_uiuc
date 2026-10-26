@@ -10,14 +10,14 @@ def plot_equity(result, ticker):
     return ax
 
 
-def plot_portfolios(result):
-    """Return two figures without showing or saving them automatically."""
+def plot_portfolios(result, label="Raw assets"):
+    """Label the invested return streams; return figures without showing or saving."""
     heatmap, ax = plt.subplots(figsize=(8, 7), layout="constrained")
     correlation = result["correlation"]
     cells = ax.imshow(correlation, vmin=-1, vmax=1, cmap="coolwarm")
     ax.set_xticks(range(len(correlation)), correlation.columns, rotation=45, ha="right")
     ax.set_yticks(range(len(correlation)), correlation.index)
-    ax.set_title("Raw-asset return correlation\n" + result["period"])
+    ax.set_title(f"{label}: return correlation\n" + result["period"])
     heatmap.colorbar(cells, ax=ax, label="Correlation")
     frontier, ax = plt.subplots(figsize=(10, 7), layout="constrained")
     cloud = result["simulation"]
@@ -32,7 +32,7 @@ def plot_portfolios(result):
         ax.scatter(row["annualized_volatility"], row["expected_return"], marker=marker,
                    s=110, color="black", label=f"{name}: Sharpe {row['sharpe_ratio']:.2f}")
     ax.set(xlabel="Annualized standard deviation", ylabel="Annualized arithmetic return",
-           title=f"In-sample efficient frontier | {result['period']}\nAnnual risk-free input: {result['risk_free']:.2%}")
+           title=f"In-sample {label} frontier | {result['period']}\nAnnual risk-free input: {result['risk_free']:.2%}")
     ax.xaxis.set_major_formatter(PercentFormatter(1))
     ax.yaxis.set_major_formatter(PercentFormatter(1))
     ax.legend(loc="upper left", fontsize=9)

@@ -10,6 +10,8 @@ Commit completed work to `Kevin-Mean-revision` and submit a pull request into `m
 This is a small, offline backtesting foundation with one entry point: `run.py`.
 The command-line runner uses buy-and-hold, or raw-asset portfolios with `--phase2`.
 RSI mean reversion and Huixin's strategies use the same Python workflow.
+The [Phase 3 frontiers](#phase-3-strategy-frontiers) reuse these functions for
+each strategy and for all 30 strategy–ticker return streams together.
 A risk-free rate must be supplied explicitly; no rate is downloaded or assumed.
 Completed coding work goes to `Kevin-Mean-revision`
 and then through a pull request into `main`.
@@ -124,15 +126,16 @@ existing backtest and metrics. Without it, both return tables contain the baseli
 
 Phase 2 passes the baseline's `asset_returns` to `analyze_portfolios` in
 `portfolio.py`. Do not pass a strategy backtest's shortened warm-up window when
-you intend to use the full raw-asset history. Future Phase 3 integration must align
-approved strategy returns and supply a matching benchmark column before reusing
-the portfolio function.
+you intend to use the full raw-asset history. Phase 3 instead supplies aligned
+`strategy_returns`, with each column named by strategy and ticker. The optimizer's
+internal comparison is one of those streams; raw SPY is compared separately.
 Both phases can use `summarize` with portfolio names as columns and `equity_curve`
 for growth calculations. The matched evaluation dates make comparisons fair;
 `prices` retains the full history when an explicitly different period is required.
 
-Phase 3 is not implemented. It must not mistake a benchmark-only result for a selected strategy or
-claim diversification across different strategies when only one is supplied.
+The Phase 3 analysis below uses the existing Python functions. The CLI's
+`--phase2` option continues to analyze raw assets. A benchmark-only result does
+not contain a selected strategy's returns.
 
 ## Run Phase 2
 
@@ -325,6 +328,159 @@ All numerical evidence above comes from the approved local inputs through
 [run.py](run.py), [portfolio.py](portfolio.py), and [metrics.py](metrics.py).
 The two PNG snapshots were saved on explicit request. The
 [existing-data caveats](#existing-data) also apply to every displayed result.
+
+## Phase 3: strategy frontiers
+
+Updated October 26, 2026. Each strategy–ticker return stream is treated as an
+investable component. The first three frontiers each combine ten tickers using
+one strategy; the fourth combines all **30 streams**. A weight assigns capital
+to that strategy account, including its cash days. The existing trading rules
+and the ten approved tickers are unchanged.
+
+All four analyses use **3,955 daily returns, January 4, 2011–September 25, 2026**,
+and the approved **2% illustrative annual risk-free rate**. Signals are calculated
+from the full Phase 1 price history. Returns are aligned after the longest
+warm-up; the existing backtest applies the one-day execution delay once.
+Cash returns remain zero, and no missing observations are filled.
+
+### Read the four charts
+
+Each chart shows 3,000 simulated allocations and 40 optimized upper-frontier
+points. The green line belongs to the named strategy universe. The dashed gray
+line is the raw-asset frontier recalculated on the same dates; the orange X is
+buy-and-hold SPY, an external comparison that receives no strategy-portfolio
+allocation. All charts share their axes and Sharpe color scale.
+
+Black markers identify minimum variance, maximum Sharpe, equal weights, and the
+single stream with the highest estimated Sharpe in that universe. "Best" is
+selected using this same historical sample, not information available in 2011.
+Annual returns below are arithmetic means multiplied by 252, not CAGR.
+
+| Maximum-Sharpe portfolio | Annual return | Annual volatility | Sharpe |
+|---|---:|---:|---:|
+| Golden Cross: ten streams | 14.63% | 14.29% | 0.885 |
+| Momentum: ten streams | 14.31% | 14.70% | 0.839 |
+| RSI mean reversion: ten streams | 4.31% | 6.55% | 0.355 |
+| Combined: 30 streams | 14.73% | 13.84% | **0.921** |
+| Raw assets: matching dates | 19.20% | 16.31% | **1.056** |
+| Buy-and-hold SPY: matching dates | 14.70% | 17.00% | 0.748 |
+
+The original Phase 2 maximum of 1.073 uses a longer sample. **1.056 is the
+appropriate raw-asset comparison here.** Combining strategies improves the
+estimated maximum over each strategy alone, but does not beat the matched-date
+raw-asset maximum. These estimates do not establish future outperformance.
+
+| Universe | Minimum volatility | Minimum-variance Sharpe | Equal-weight Sharpe | Best single stream: Sharpe |
+|---|---:|---:|---:|---|
+| Golden Cross | 10.35% | 0.490 | 0.693 | Golden Cross QQQ: 0.782 |
+| Momentum | 11.05% | 0.480 | 0.694 | Momentum QQQ: 0.742 |
+| RSI mean reversion | 5.64% | 0.230 | 0.209 | RSI PG: 0.292 |
+| Combined | 5.55% | 0.277 | 0.621 | Golden Cross QQQ: 0.782 |
+
+### Golden Cross frontier
+
+![Golden Cross frontier across ten ticker streams, compared with raw assets on matching dates](docs/golden_cross_frontier.png)
+
+This combines the existing 50/200-day trend rule across tickers. Its maximum
+Sharpe exceeds the best single stream's 0.782 and equal weights' 0.693 in this
+sample. The maximum-Sharpe allocation uses five tickers; it is still exposed
+to shared equity trends and delayed exits after reversals.
+
+### Momentum frontier
+
+![Momentum frontier across ten ticker streams, compared with raw assets on matching dates](docs/momentum_frontier.png)
+
+This uses each ticker's positive return from 252 sessions ago to 21 sessions
+ago. It does not rank assets to select relative winners. Its maximum Sharpe is
+below Golden Cross on these dates. These two trend rules can hold the same
+underlying stocks at the same time, so their names alone do not imply independence.
+
+### RSI mean-reversion frontier
+
+![RSI mean-reversion frontier across ten ticker streams, compared with raw assets on matching dates](docs/rsi_frontier.png)
+
+This uses 14-day RSI, entering below 30 and exiting at or above 50. The fitted
+portfolio has low volatility and low return. Its maximum-Sharpe weights average
+only **9.79% invested in equities** across days; the remainder is zero-interest
+cash inside the strategy accounts. Low volatility therefore should not be read
+as evidence of better diversification by itself. For comparison, the corresponding
+equity exposure is 78.30% for Golden Cross and 83.58% for momentum.
+
+### Combined strategy frontier
+
+![Combined frontier across all thirty strategy–ticker streams](docs/combined_strategy_frontier.png)
+
+All 30 streams are eligible, with nonnegative weights summing to one. Zero
+weights let the combined universe reproduce any separate strategy portfolio,
+so its theoretical best in-sample Sharpe cannot be lower. The fitted maximum
+uses six streams: about **69.81% Golden Cross and 30.19% momentum**. RSI receives
+zero weight at this particular maximum-Sharpe point; that does not exclude it
+from lower-risk points on the frontier or prove it will be unhelpful in another
+period. The combined minimum volatility is 5.55%.
+
+### Maximum-Sharpe allocations
+
+For the separate frontiers, each percentage is capital allocated to that
+strategy on the named ticker. Zeros include tiny solver residuals; rounding
+may prevent displayed weights from totaling exactly 100%.
+
+| Ticker | Golden Cross | Momentum | RSI mean reversion |
+|---|---:|---:|---:|
+| SPY | 0.00% | 0.00% | 0.00% |
+| QQQ | 34.29% | 37.72% | 8.67% |
+| IWM | 0.00% | 0.00% | 0.00% |
+| AAPL | 26.30% | 10.63% | 4.85% |
+| JPM | 11.36% | 6.13% | 13.96% |
+| XOM | 14.19% | 3.73% | 0.00% |
+| JNJ | 0.00% | 0.00% | 0.00% |
+| PG | 0.00% | 0.00% | 41.12% |
+| WMT | 13.87% | 31.26% | 29.72% |
+| CAT | 0.00% | 10.52% | 1.68% |
+
+| Combined stream | Weight |
+|---|---:|
+| Golden Cross: QQQ | 26.99% |
+| Golden Cross: AAPL | 23.53% |
+| Golden Cross: JPM | 8.14% |
+| Golden Cross: XOM | 11.14% |
+| Momentum: WMT | 23.92% |
+| Momentum: CAT | 6.27% |
+| Other 24 streams | 0.00% |
+
+### Shared data and reproduction
+
+The saved analysis uses the existing functions; no second backtest or portfolio
+engine was added. Follow these steps with the approved local dataset:
+
+1. Load full prices with `data.load_prices`. For each of `golden_cross`,
+   `momentum`, and `mean_reversion`, pass its signals to `backtest` and keep
+   `strategy_returns`.
+2. Give columns unique strategy/ticker names. Join the three tables on their
+   common dates, preserving cash zeros. Here the separate tables are 3,955 × 10
+   and the combined table is 3,955 × 30. Do not shift these returns again.
+3. For each table, use `summarize(table, 0.02)` to identify its highest-Sharpe
+   single column. Pass that column's name as `benchmark` to
+   `analyze_portfolios(table, 0.02, benchmark=...)`. This internal comparison is
+   a strategy stream, not raw SPY. The function returns simulations, the frontier,
+   comparison metrics, and their full allocation tables in memory.
+4. Recalculate raw-asset returns on those same dates for the gray reference
+   frontier and raw-SPY comparison. Keep them outside the strategy input table.
+5. Call `plot_portfolios(result, label=...)` with the strategy name. It returns
+   figures without saving. These four PNGs were explicitly exported for this
+   request; the export also adds the external references and common scales.
+
+The same `numpy.cov(..., rowvar=False, ddof=1) * 252` and risk-free conversion
+apply in every case. Portfolio weights are fixed targets rebalanced daily;
+the underlying strategy positions still switch between invested and cash.
+Costs and slippage are excluded. This is a static, in-sample frontier analysis;
+it does not implement dynamic portfolio weights or mix raw assets into the
+strategy portfolios. The proposed IEF/IAU substitutions remain unimplemented.
+
+Checks: all frontier weights sum to one and meet their target returns within
+`1e-8`; comparison metrics agree with directly weighted daily returns. An
+independent convex reformulation reproduced each maximum Sharpe within `1e-8`.
+These checks validate the calculations, not future performance. The existing
+data-quality and selected-universe limitations below still apply.
 
 ## Existing data
 
