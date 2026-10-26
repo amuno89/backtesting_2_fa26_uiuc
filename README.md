@@ -337,7 +337,7 @@ one strategy; the fourth combines all **30 streams**. A weight assigns capital
 to that strategy account, including its cash days. The existing trading rules
 and the ten approved tickers are unchanged.
 
-The [three proposed combinations](#proposed-strategy-combinations) below describe
+The [five proposed combinations](#proposed-strategy-combinations) below describe
 the next experiments. They are not implemented or included in these frontier results.
 
 All four analyses use **3,955 daily returns, January 4, 2011–September 25, 2026**,
@@ -487,12 +487,16 @@ data-quality and selected-universe limitations below still apply.
 
 ### Proposed strategy combinations
 
-These three research proposals aim for practical trading and returns after costs,
+The retained shortlist is **C1, C3, C4, C5, and C6**. C4 replaces C2, whose MACD
+account could remain invested below the 10-day low. The labels preserve the earlier
+discussion; C6 remains part of the research shortlist.
+
+These five research proposals aim for practical trading and returns after costs,
 with acceptable volatility and drawdown. They target quicker participation in
 rebounds and quicker exposure reduction during continued declines. Their response
 speed, returns, and diversification have not been tested; no new results are claimed.
 
-All three use the same ten approved tickers: **SPY, QQQ, IWM, AAPL, JPM, XOM,
+All five use the same ten approved tickers: **SPY, QQQ, IWM, AAPL, JPM, XOM,
 JNJ, PG, WMT, and CAT**. Each ticker has a maximum target allocation of **10% of
 total portfolio equity**, including all strategy accounts for that ticker.
 Unused allocations stay in cash and are not redistributed to the remaining
@@ -509,7 +513,7 @@ days and the lowest adjusted close in the previous 10 trading days. Both exclude
 today's close and are recalculated daily. This is a closing-price variation of
 Donchian channels. Signals begin only after sufficient history is available.
 
-#### 1. MACD entry with an additional downside exit
+#### C1. MACD entry with an additional downside exit
 
 For each ticker, invest its **10% budget** while MACD is bullish and the adjusted
 close is at or above the previous 10-day lowest close. Otherwise hold that budget
@@ -519,26 +523,11 @@ This provides two ways to reduce exposure: weakening MACD or a downside breakdow
 It is the closest design match to the response goal, but bullish MACD can occur
 while prices are still falling. Repeated exits and re-entries can increase costs.
 
-#### 2. Independent MACD and breakout accounts
-
-For each ticker, assign **7% of portfolio equity to MACD and 3% to breakout**.
-Across ten tickers, the target budgets total 70% MACD and 30% breakout.
-
-- The MACD account invests while MACD is bullish and holds cash otherwise.
-- The breakout account enters when the close exceeds the previous 20-day highest
-  close. It holds until the close falls below the previous 10-day lowest close,
-  then returns to cash. Between those events, keep its existing position.
-
-The accounts act independently, so combined exposure to one ticker can be 0%,
-3%, 7%, or 10%. Most capital follows MACD, while a smaller account waits for an
-upside breakout. That account can enter a rebound late, and the two signals may
-still produce similar returns. Different rule names do not establish diversification.
-
-#### 3. Enter partially, increase after confirmation
+#### C3. Enter partially, increase after confirmation
 
 For each ticker, use these target allocations:
 
-1. From cash, invest **5% of portfolio equity** when candidate 1's entry conditions hold.
+1. From cash, invest **5% of portfolio equity** when C1's entry conditions hold.
 2. Increase to **10%** when the close exceeds the previous 20-day highest close.
    If this also happens on the entry day, the target can immediately be 10%.
 3. After increasing, retain 10% until MACD is no longer bullish or the close falls
@@ -550,17 +539,97 @@ This permits partial participation before breakout confirmation. However, some
 rebound gains may occur while half the budget remains in cash. Tracking the
 partial and full positions also requires more logic and testing.
 
-Candidates 1 and 3 are new hybrid rules using the listed indicators. Candidate 2
-combines the two strategies independently. None changes the existing Golden Cross,
-momentum, or RSI rules, and none is included in the four charts above.
+#### C4. MACD and breakout with a shared downside exit
+
+For each ticker, assign **7% of portfolio equity to C1's rule and 3% to breakout**.
+The first account invests only when MACD is bullish and price is at or above the
+previous 10-day lowest close. The breakout account enters above the previous
+20-day highest close, holds until price falls below the previous 10-day lowest
+close, and otherwise keeps its existing position. Start that account in cash.
+
+The accounts act independently, giving target exposures of 0%, 3%, 7%, or 10%.
+Both exit after a downside breakdown, including when MACD remains bullish.
+This removes C2's remaining 7% exposure in that situation. False breakdowns can
+still cause costly exits and re-entries; the breakout account can enter rebounds late.
+
+#### C5. Full entry with partial exposure during weakness
+
+Run the same breakout account state as C4 independently, then set one target
+allocation per ticker, using this order:
+
+1. Invest **10%** when C1's entry conditions hold.
+2. Otherwise invest **5%** when the breakout account is active.
+3. Otherwise hold cash. Below the previous 10-day lowest close, the target is **0%**.
+
+These are alternative allocations, not amounts to add together. C5 can enter fully
+before an upside breakout and retain half exposure when MACD weakens while the
+breakout remains active. That can help during a temporary interruption, but the
+remaining 5% can lose money before the downside channel breaks. Full early entry
+also exposes more capital to a failed rebound than C3's partial entry.
+
+#### C6. C1 with volatility-based position sizing
+
+Use C1's entry and exit conditions. At each close, estimate annualized volatility
+from the latest **20 completed daily raw-asset returns**, calculated from approved
+adjusted prices: sample standard deviation multiplied by the square root of 252.
+Wait for all required price and return history before taking a position.
+
+When C1 is active, use **10%** if estimated volatility is at most **20%**, including
+zero. Above 20%, use **10% times 20% divided by estimated volatility**. For example,
+40% estimated volatility gives a 5% target, and 60% gives about 3.33%. When C1 is
+inactive, hold cash. Apply the completed day's sizing decision to subsequent returns.
+
+The 20% reference is an illustrative sizing choice, not a promised portfolio
+volatility level. Use the underlying asset's returns so cash days do not make the
+market appear artificially calm. C6 changes exposure, not entry/exit timing;
+high volatility after a fall may reduce participation in a sharp rebound.
+Research motivates investigating volatility management, but does not validate
+this particular rule: [Moreira and Muir](https://amoreira2.github.io/alan-moreira.github.io/VolPortfolios_published.pdf).
+
+All five are unimplemented combinations using the listed indicators. None changes
+the existing Golden Cross, momentum, or RSI rules, and none appears in the four
+frontier charts above.
 
 Ten capped budgets spread capital across the approved universe, but the ETFs
 overlap individual stocks and all positions remain US equities or cash. Active
 holdings can shrink when signals switch off. The 10% limit is a ticker limit,
 not a limit on a company's total exposure through direct holdings and ETFs.
 
-Proposed evaluation: test candidate 1 against an equal-budget MACD-only baseline,
-then compare candidate 2; consider candidate 3 if the simpler rules justify it.
+#### How the combinations may complement each other
+
+Their advantages can partly offset their limitations, but cannot cancel them.
+
+| Candidate | Contribution to test | Trade-off that remains |
+|---|---|---|
+| C1 | Full participation before breakout confirmation can offset C3/C6's smaller early exposure | Greater loss if that early entry fails |
+| C3 | Partial entry limits the amount exposed before confirmation | Less participation in a genuine early rebound |
+| C4 | Retains a small breakout account through MACD weakness, with a shared downside exit | Breakout delay and losses before the downside threshold is crossed |
+| C5 | More participation than C4 during early recovery or temporary MACD weakness | More capital exposed if weakness continues |
+| C6 | Scales down exposure when recent volatility is high | Can remain lightly invested during a volatile rebound |
+
+For an arithmetic illustration, give **20% to each candidate portfolio**. The
+following targets apply to one ticker at that equal-weight allocation, assuming
+C6's estimated volatility is **40%**. They are not backtest results; monthly
+account weights would drift between rebalances.
+
+| Signal state | C1 | C3 | C4 | C5 | C6 | Equal-weight blend |
+|---|---:|---:|---:|---:|---:|---:|
+| Fresh C1 entry; no breakout; C3 still partial | 10% | 5% | 7% | 10% | 5% | **7.4%** |
+| Bullish MACD and confirmed breakout; C3 fully invested | 10% | 10% | 10% | 10% | 5% | **9.0%** |
+| MACD off; existing breakout remains active above its exit | 0% | 0% | 3% | 5% | 0% | **1.6%** |
+| Price below the previous 10-day lowest close | 0% | 0% | 0% | 0% | 0% | **0%** |
+
+These percentages refer to total equity in each candidate or the combined portfolio,
+respectively. Apply each ticker's own signals; the ten need not be in the same state.
+C1, C3, and C6 share their entry/exit conditions and mainly change the amount
+invested. C4 and C5 also share the same breakout state. Correlated losses, missed
+rebounds while in cash, and losses before an exit takes effect therefore remain.
+Retaining five candidates does not establish five independent sources of return
+or prove that all five deserve positive weights in a final portfolio.
+
+Proposed evaluation: compare all five with C1, an equal-budget MACD-only baseline,
+and the fixed equal-weight blend. Also compare C1 at a similar exposure level,
+chosen using earlier observations, to separate lower exposure from diversification.
 Define rebound and decline episodes before measuring entry and exit delays.
 Compare returns after trading costs, maximum drawdown, volatility, and effective
 holdings on matching dates, using earlier observations for any fitted choices.
@@ -570,26 +639,28 @@ above exclude costs.
 
 #### Dynamic weighting experiment
 
-Once the three candidates are implemented, test whether changing their allocations
+Once the five candidates are implemented, test whether changing their allocations
 helps when their relative performance changes. This is a planned experiment;
 there are no dynamic-weighting results yet. Use two versions with the same
 monthly rebalancing schedule:
 
-| Version | Target allocation among the three candidate portfolios |
+| Version | Target allocation among C1, C3, C4, C5, and C6 |
 |---|---|
-| Fixed targets | One third to each candidate at every monthly rebalance |
-| Dynamic targets | 50% to the highest-ranked candidate, 30% to the next, and 20% to the last |
+| Fixed targets | 20% to each candidate at every monthly rebalance |
+| Dynamic targets | 30%, 25%, 20%, 15%, and 10%, from highest to lowest ranked |
 
 On the last trading day of each month, rank the candidates by their compounded
 returns over the previous **63 common trading days**, including that completed
 day. Use each candidate's standalone returns after its own trading costs,
 including its cash days. Tied candidates share the corresponding target weights
-equally. Use equal thirds until all three have 63 common evaluation days.
-The lookback and allocations are starting choices, not optimized parameters.
+equally. Use equal fifths until all five have 63 common evaluation days.
+This illustrative five-candidate schedule replaces the earlier three-candidate
+50/30/20 schedule. The lookback and allocations are starting choices, not optimized
+parameters or a claim that recent winners will remain best.
 
 Apply the new allocation to subsequent returns. Between monthly rebalances, let
-the three account weights drift with their gains and losses. Using a fixed
-50/30/20 weighted sum every day would instead imply daily rebalancing. Delay the
+the five account weights drift with their gains and losses. Holding the target
+percentages constant every day would instead imply daily rebalancing. Delay the
 allocation decision once; do not shift the already executed strategy returns again.
 Each candidate continues its daily entry and exit decisions independently, and
 changing its capital allocation does not reset its signal or partial-position state.
@@ -607,8 +678,8 @@ Compare both versions on matching subsequent dates using net compound return,
 drawdown, volatility, turnover, cash exposure, and entry/exit delays.
 
 Monthly weighting may lag a change in market conditions, and recent winners may
-not remain best. The rule still assigns 50% to the highest-ranked candidate when
-all three have lost money. Retain dynamic weighting only if its measured benefits
+not remain best. The rule still assigns 30% to the highest-ranked candidate when
+all five have lost money. Retain dynamic weighting only if its measured benefits
 justify the extra trading and complexity. General background:
 [rebalancing and transaction costs](https://www.investor.gov/additional-resources/general-resources/publications-research/info-sheets/beginners-guide-asset).
 
