@@ -6,9 +6,8 @@ import pytest
 from backtest import backtest
 from data import validate_prices
 from mean_reversion import mean_reversion
-from metrics import summarize
+from performance import analyze_portfolios, summarize
 from run import analyze
-from portfolio import analyze_portfolios
 import pandas as pd
 from strategies import golden_cross, momentum
 
@@ -72,21 +71,30 @@ def test_constant_excess_returns_have_undefined_sharpe(prices):
     assert summarize(cash_returns, risk_free=0.05)["sharpe_ratio"].isna().all()
 
 
-@pytest.mark.parametrize("benchmark_only", [True, False])
-def test_shared_analysis(prices, benchmark_only):
+@pytest.mark.parametrize("mode, warmup", [("baseline", 0), ("warmup", 3), ("rsi", 14)])
+def test_shared_analysis(prices, mode, warmup):
     def test_signals(history):
         decisions = history.notna().astype(float)
         decisions.iloc[:3] = np.nan
         return decisions
 
-    strategy = None if benchmark_only else test_signals
+    strategy = {"baseline": None, "warmup": test_signals, "rsi": mean_reversion}[mode]
     result = analyze(os.environ["BACKTEST_DATA"], strategy=strategy)
-    assert result["benchmark_only"] is benchmark_only
-    assert result["prices"].iloc[:len(prices)].equals(prices)
-    expected_start = prices.index[1 if benchmark_only else 4]
-    assert result["asset_returns"].index[0] == expected_start
-    assert result["asset_returns"].equals(result["strategy_returns"])
-    assert result["summary"].equals(result["benchmark_summary"])
+    history = result["prices"]
+    signals = history.notna().astype(float) if strategy is None else strategy(history)
+    expected_positions = signals.shift(1).iloc[warmup + 1:]
+    expected = expected_positions * history.pct_change(fill_method=None).iloc[warmup + 1:]
+    assert result["benchmark_only"] is (strategy is None)
+    assert history.iloc[:len(prices)].equals(prices)
+    assert result["asset_returns"].index[0] == history.index[warmup + 1]
+    assert result["held_positions"].equals(expected_positions)
+    assert result["equity"].index[0] == history.index[warmup]
+    assert result["strategy_returns"].equals(expected)
+    assert result["benchmark_returns"].index.equals(expected.index)
+    assert result["summary"].equals(summarize(expected))
+    if mode != "rsi":
+        assert result["asset_returns"].equals(result["strategy_returns"])
+        assert result["summary"].equals(result["benchmark_summary"])
 
 
 def test_mean_reversion_signals(approved_prices):
@@ -115,20 +123,6 @@ def test_mean_reversion_signals(approved_prices):
     # Approved QQQ observations: cash, oversold entry, continued hold, then exit.
     dates = ["2010-01-25", "2010-01-29", "2010-02-01", "2010-02-17"]
     assert signals.loc[dates, "QQQ"].tolist() == [0.0, 1.0, 1.0, 0.0]
-
-
-def test_mean_reversion_integration(prices):
-    result = analyze(os.environ["BACKTEST_DATA"], strategy=mean_reversion)
-    history = result["prices"]
-    signals = mean_reversion(history)
-    expected_positions = signals.shift(1).iloc[15:]
-    assert result["benchmark_only"] is False
-    assert result["held_positions"].equals(expected_positions)
-    assert result["equity"].index[0] == history.index[14]
-    expected = expected_positions * history.pct_change(fill_method=None).iloc[15:]
-    assert result["strategy_returns"].equals(expected)
-    assert result["benchmark_returns"].index.equals(expected.index)
-    assert result["summary"].equals(summarize(expected))
 
 
 def test_mean_reversion_zero_gain_loss(prices):

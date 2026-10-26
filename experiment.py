@@ -9,8 +9,7 @@ from backtest import backtest
 from combinations import v2_signals
 from data import load_prices
 from mean_reversion import mean_reversion
-from metrics import summarize
-from portfolio import analyze_portfolios
+from performance import analyze_portfolios, summarize
 from strategies import golden_cross, momentum
 
 

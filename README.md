@@ -19,26 +19,36 @@ A risk-free rate must be supplied explicitly; no rate is downloaded or assumed.
 Completed coding work goes to `Kevin-Mean-revision`
 and then through a pull request into `main`.
 
-- `run.py` loads the data once, calls the calculations, and returns their results.
-- `data.py` reads the approved dataset, verifies its raw-file checksum, compares
-  adjusted prices with the raw observations, and checks the NYSE trading calendar.
-- `backtest.py` applies supplied positions to the following day's returns and
-  compares each ticker with buy-and-hold over the same dates.
-- `metrics.py` calculates performance statistics from a daily return table.
-- `mean_reversion.py` returns RSI-based signals independently of Golden Cross.
-- `strategies.py` contains Huixin's Golden Cross and momentum rules.
-- `compare.py` compares strategy metrics over a shared evaluation period.
-- `portfolio.py` combines daily returns into portfolios and finds the frontier.
-- `plots.py` draws equity curves, the correlation heatmap, and the frontier.
-- `tests/test_core.py` checks these functions against existing local observations.
-- `combinations.py` produces C1, C3, revised C4/C5, and C6 signals from the same prices.
-- `allocation.py` accounts for cash, trading costs, and monthly portfolio allocations.
-- `experiment.py` compares candidates, controls, fixed/dynamic weights, and removals.
-- `tests/test_combinations.py` and `tests/test_allocation.py` check the new rules and accounting.
+The project stays in one shallow folder, with shared calculations used by every phase:
 
-Each file keeps its role across phases. All source, tests, comments, and blank
-lines combined must stay at or below **950 lines**, approved on October 26, 2026.
-Phase 2 retains its 300-added-line limit and is unchanged by this experiment.
+```text
+run.py                  Baseline, raw-asset portfolios, and strategy comparisons
+experiment.py           Combination controls, costs, allocations, and strategy frontier
+data.py                 Read and validate the approved local prices
+backtest.py             Apply signals to next-day returns and build equity curves
+performance.py          Shared statistics, covariance, and portfolio optimization
+allocation.py           Cash, trading fees, and monthly capital allocations
+strategies.py           Huixin's Golden Cross and momentum rules
+mean_reversion.py       Independent RSI strategy
+combinations.py         C1, C3, revised C4/C5, and C6 signals
+plots.py                Equity curves, correlation heatmap, and efficient frontier
+tests/
+    conftest.py         Shared approved-data setup
+    test_core.py        Data, timing, strategies, metrics, and frontier checks
+    test_combinations.py  Combination signals and holding states
+    test_allocation.py  Trading costs, cash, rankings, and capital drift
+docs/                   PNGs displayed in this README
+```
+
+`performance.py` contains the functions previously in `metrics.py` and
+`portfolio.py`; import `summarize`, `excess_returns`, and `analyze_portfolios`
+from `performance`. The comparison function is now `run.compare` instead of
+`compare.compare`. Both existing command-line entry points remain available.
+
+The current total is **931 lines**, including all source, tests, comments, and
+blank lines. Preserve all functionality and test coverage while keeping the code
+readable; the established 950-line ceiling remains. Phase 2 retains its
+300-added-line limit, with the same calculations now in `performance.py`.
 The earlier mean-reversion addition retains its separate 100-added-line limit.
 All charts and their interpretations are presented in this README. The `docs/`
 folder contains supporting PNG images only; there is no separate visual report.
@@ -133,7 +143,7 @@ existing backtest and metrics. Without it, both return tables contain the baseli
 `benchmark_only=True` means no selected strategy has been evaluated.
 
 Phase 2 passes the baseline's `asset_returns` to `analyze_portfolios` in
-`portfolio.py`. Do not pass a strategy backtest's shortened warm-up window when
+`performance.py`. Do not pass a strategy backtest's shortened warm-up window when
 you intend to use the full raw-asset history. Phase 3 instead supplies aligned
 `strategy_returns`, with each column named by strategy and ticker. The optimizer's
 internal comparison is one of those streams; raw SPY is compared separately.
@@ -333,7 +343,7 @@ does not establish how an investor would have selected them at the start of 2010
 shows them. Nothing exports files or refreshes data automatically.
 
 All numerical evidence above comes from the approved local inputs through
-[run.py](run.py), [portfolio.py](portfolio.py), and [metrics.py](metrics.py).
+[run.py](run.py) and [performance.py](performance.py).
 The two PNG snapshots were saved on explicit request. The
 [existing-data caveats](#existing-data) also apply to every displayed result.
 
@@ -947,8 +957,8 @@ invariance, warm-up, state retention, confirmed entries, downside exits, volatil
 sizing, initial fees, price-drift turnover, cash, monthly ranking, tied ranks, and
 allocation drift. Recorded fees match traded notional times the cost rate. All
 three cost scenarios completed end to end using the same approved inputs.
-Including the optional frontier below, the current total is **950 lines**, counting
-all source, tests, comments, and blank lines. Phase 2 source remains unchanged.
+Including the optional frontier below, the current total is **931 lines**, counting
+all source, tests, comments, and blank lines. Phase 2 calculations are unchanged.
 No dataset was downloaded, refreshed, or saved by the experiment.
 
 ### Efficient frontier across five strategy portfolios
@@ -1075,7 +1085,7 @@ values are daily decimal returns, not percentages.
 | 2020-01-06 | 0.002523 | 0.002523 | 0.002452 | 0.000000 | 0.002523 |
 
 With `include_frontier=True`, `result["frontier"]` uses the existing
-`portfolio.py` schema: a 5 × 5 correlation/covariance matrix, 3,000 × 5 simulated
+`performance.py` schema: a 5 × 5 correlation/covariance matrix, 3,000 × 5 simulated
 weights, 40 × 5 frontier weights, and comparison metrics and allocations.
 Covariance is still `numpy.cov(..., rowvar=False, ddof=1) * 252`; no separate
 data pipeline or optimizer was added.
@@ -1101,8 +1111,8 @@ weight sums, and upper-frontier risk ordering pass. An independent check of all
 31 possible candidate subsets reproduces the maximum Sharpe within `1e-8` at
 0, 5, and 10 basis points; a separate convex formulation confirms the Phase 1
 and raw-asset comparison maxima. The optional integration returns the same
-results as the direct workflow. Total code is **950 lines**; approved inputs,
-strategy rules, and Phase 2 source are unchanged.
+results as the direct workflow. Total code is **931 lines**; approved inputs,
+strategy rules, and Phase 2 calculations are unchanged.
 
 ## Existing data
 

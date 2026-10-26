@@ -6,7 +6,7 @@ import pandas as pd
 
 from backtest import backtest
 from data import load_prices
-from metrics import summarize
+from performance import analyze_portfolios, summarize
 
 
 def analyze(data_folder, strategy=None, risk_free=None):
@@ -26,6 +26,18 @@ def analyze(data_folder, strategy=None, risk_free=None):
     return result
 
 
+def compare(prices, strategies, metric="annualized_return", warmup=252):
+    """One metric for every strategy and buy-and-hold, over the same dates."""
+    table = {}
+    for name, strategy in strategies.items():
+        signals = strategy(prices)
+        signals.iloc[:warmup] = float("nan")
+        result = backtest(prices, signals)
+        table[name] = summarize(result["strategy_returns"])[metric]
+    table["Buy and hold"] = summarize(result["benchmark_returns"])[metric]
+    return pd.DataFrame(table)
+
+
 def main():
     parser = argparse.ArgumentParser(description="Run offline backtesting or raw-asset portfolios.")
     parser.add_argument("data_folder", help="Path to the approved existing dataset")
@@ -37,7 +49,6 @@ def main():
     try:
         result = analyze(args.data_folder, risk_free=args.risk_free)
         if args.phase2:
-            from portfolio import analyze_portfolios
             from plots import plot_portfolios
             import matplotlib.pyplot as plt
             portfolios = analyze_portfolios(result["asset_returns"], args.risk_free)
