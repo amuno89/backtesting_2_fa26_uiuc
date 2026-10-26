@@ -568,6 +568,50 @@ Use the existing equal-weight combined portfolio as a provisional stability
 reference. Transaction-cost modeling remains future work; the current results
 above exclude costs.
 
+#### Dynamic weighting experiment
+
+Once the three candidates are implemented, test whether changing their allocations
+helps when their relative performance changes. This is a planned experiment;
+there are no dynamic-weighting results yet. Use two versions with the same
+monthly rebalancing schedule:
+
+| Version | Target allocation among the three candidate portfolios |
+|---|---|
+| Fixed targets | One third to each candidate at every monthly rebalance |
+| Dynamic targets | 50% to the highest-ranked candidate, 30% to the next, and 20% to the last |
+
+On the last trading day of each month, rank the candidates by their compounded
+returns over the previous **63 common trading days**, including that completed
+day. Use each candidate's standalone returns after its own trading costs,
+including its cash days. Tied candidates share the corresponding target weights
+equally. Use equal thirds until all three have 63 common evaluation days.
+The lookback and allocations are starting choices, not optimized parameters.
+
+Apply the new allocation to subsequent returns. Between monthly rebalances, let
+the three account weights drift with their gains and losses. Using a fixed
+50/30/20 weighted sum every day would instead imply daily rebalancing. Delay the
+allocation decision once; do not shift the already executed strategy returns again.
+Each candidate continues its daily entry and exit decisions independently, and
+changing its capital allocation does not reset its signal or partial-position state.
+
+Keep each candidate's 10% ticker target limit relative to its own account capital.
+A nonnegative blend preserves that target limit across the whole portfolio;
+market movements can still cause actual holdings to drift. Cash inside inactive
+accounts stays cash. ETF overlap and a small number of active positions can still
+limit diversification.
+
+Include costs from candidate trading and from changes in portfolio allocations,
+without counting the same trade twice. Allocation-change costs belong in the
+combined portfolio result, not in the standalone returns used to rank candidates.
+Compare both versions on matching subsequent dates using net compound return,
+drawdown, volatility, turnover, cash exposure, and entry/exit delays.
+
+Monthly weighting may lag a change in market conditions, and recent winners may
+not remain best. The rule still assigns 50% to the highest-ranked candidate when
+all three have lost money. Retain dynamic weighting only if its measured benefits
+justify the extra trading and complexity. General background:
+[rebalancing and transaction costs](https://www.investor.gov/additional-resources/general-resources/publications-research/info-sheets/beginners-guide-asset).
+
 Any implementation must reuse approved prices and shared backtest/metric functions,
 stay within **600 total code lines**, and keep Phase 2 within its 300-added-line
 limit. This README addition contains no implementation or new market data.
