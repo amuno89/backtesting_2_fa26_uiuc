@@ -18,8 +18,6 @@ def experiment(data_folder, cost_bps, risk_free, include_frontier=False):
     prices = load_prices(data_folder)
     signals = v2_signals(prices)
     names = list(signals)
-    signals["Original C4"] = 0.7 * signals["C1"] + 0.3 * signals["C4"]
-    signals["Original C5"] = signals["C1"].where(signals["C1"].eq(1), 0.5 * signals["C4"])
     signals["Phase 1 blend"] = (golden_cross(prices) + momentum(prices) + mean_reversion(prices)) / 3
     signals["Equal-weight assets"] = prices.notna().astype(float)
     macd = prices.ewm(span=12, adjust=False).mean() - prices.ewm(span=26, adjust=False).mean()

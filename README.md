@@ -30,7 +30,7 @@ performance.py          Shared statistics, covariance, and portfolio optimizatio
 allocation.py           Cash, trading fees, and monthly capital allocations
 strategies.py           Huixin's Golden Cross and momentum rules
 mean_reversion.py       Independent RSI strategy
-combinations.py         C1, C3, revised C4/C5, and C6 signals
+combinations.py         C1, C3, C4, C5, and C6 signals
 plots.py                Equity curves, correlation heatmap, and efficient frontier
 tests/
     conftest.py         Shared approved-data setup
@@ -45,7 +45,7 @@ docs/                   PNGs displayed in this README
 from `performance`. The comparison function is now `run.compare` instead of
 `compare.compare`. Both existing command-line entry points remain available.
 
-The current total is **931 lines**, including all source, tests, comments, and
+The current total is **929 lines**, including all source, tests, comments, and
 blank lines. Preserve all functionality and test coverage while keeping the code
 readable; the established 950-line ceiling remains. Phase 2 retains its
 300-added-line limit, with the same calculations now in `performance.py`.
@@ -507,20 +507,15 @@ data-quality and selected-universe limitations below still apply.
 
 ### Proposed strategy combinations
 
-The original candidate descriptions below preserve the design history. The
-[version 2 proposal and relationship map](#version-2-proposal-and-relationship-map)
-describe the implemented experiment, including different roles for C4 and C5.
-The original allocation examples do not apply to those revised rules. See
+The implemented shortlist is **C1, C3, C4, C5, and C6**. The
+[relationship map](#version-2-proposal-and-relationship-map) shows how the accounts
+connect to the shared backtest and portfolio analysis. See
 [running and testing version 2](#running-and-testing-version-2) for measured results.
 
-The retained shortlist is **C1, C3, C4, C5, and C6**. C4 replaces C2, whose MACD
-account could remain invested below the 10-day low. The labels preserve the earlier
-discussion; C6 remains part of the research shortlist.
-
-These five research proposals aim for practical trading and returns after costs,
+These five research candidates aim for practical trading and returns after costs,
 with acceptable volatility and drawdown. They target quicker participation in
-rebounds and quicker exposure reduction during continued declines. Their response
-speed, returns, and diversification have not been tested; no new results are claimed.
+rebounds and quicker exposure reduction during continued declines. The historical
+results below evaluate returns and risk; they do not establish rapid response speed.
 
 All five use the same ten approved tickers: **SPY, QQQ, IWM, AAPL, JPM, XOM,
 JNJ, PG, WMT, and CAT**. Each ticker has a maximum target allocation of **10% of
@@ -565,33 +560,33 @@ This permits partial participation before breakout confirmation. However, some
 rebound gains may occur while half the budget remains in cash. Tracking the
 partial and full positions also requires more logic and testing.
 
-#### C4. MACD and breakout with a shared downside exit
+#### C4. Pure 20/10 closing-price breakout
 
-For each ticker, assign **7% of portfolio equity to C1's rule and 3% to breakout**.
-The first account invests only when MACD is bullish and price is at or above the
-previous 10-day lowest close. The breakout account enters above the previous
-20-day highest close, holds until price falls below the previous 10-day lowest
-close, and otherwise keeps its existing position. Start that account in cash.
+For each ticker, invest its **10% budget** when the adjusted close exceeds the
+highest adjusted close in the previous 20 trading days. Hold until the close
+falls below the lowest adjusted close in the previous 10 trading days, then
+return to cash. Both thresholds exclude today's close. Start in cash.
 
-The accounts act independently, giving target exposures of 0%, 3%, 7%, or 10%.
-Both exit after a downside breakdown, including when MACD remains bullish.
-This removes C2's remaining 7% exposure in that situation. False breakdowns can
-still cause costly exits and re-entries; the breakout account can enter rebounds late.
+C4 can keep holding through MACD weakness because its decisions depend on the
+price channels. Breakout confirmation can delay rebound entry, and false
+breakouts can still produce losses and trading costs.
 
-#### C5. Full entry with partial exposure during weakness
+#### C5. Bollinger-band re-entry
 
-Run the same breakout account state as C4 independently, then set one target
-allocation per ticker, using this order:
+For each ticker, calculate the 20-day moving average and the lower Bollinger
+band, two population standard deviations below that average. Use these rules:
 
-1. Invest **10%** when C1's entry conditions hold.
-2. Otherwise invest **5%** when the breakout account is active.
-3. Otherwise hold cash. Below the previous 10-day lowest close, the target is **0%**.
+1. The previous close was below its then-current lower band.
+2. Invest the **10% budget** when the close returns inside the band, rises above
+   the previous close, remains below the moving average, and is at or above the
+   previous 10-day lowest close.
+3. Hold until the close reaches or exceeds the moving average, or falls below
+   the previous 10-day lowest close, then return to cash. Start in cash.
 
-These are alternative allocations, not amounts to add together. C5 can enter fully
-before an upside breakout and retain half exposure when MACD weakens while the
-breakout remains active. That can help during a temporary interruption, but the
-remaining 5% can lose money before the downside channel breaks. Full early entry
-also exposes more capital to a failed rebound than C3's partial entry.
+This can enter a rebound before bullish MACD or a 20-day breakout. A re-entry
+does not establish that a decline has ended, and exiting at the average can
+miss a longer advance. Background:
+[Fidelity's Bollinger Bands guide](https://www.fidelity.com/learning-center/trading-investing/technical-analysis/technical-indicator-guide/bollinger-bands).
 
 #### C6. C1 with volatility-based position sizing
 
@@ -612,9 +607,8 @@ high volatility after a fall may reduce participation in a sharp rebound.
 Research motivates investigating volatility management, but does not validate
 this particular rule: [Moreira and Muir](https://amoreira2.github.io/alan-moreira.github.io/VolPortfolios_published.pdf).
 
-Version 2 below implements C1, C3, C6 and revised C4/C5; the original C4/C5 are
-also evaluated as controls. None changes the existing Golden Cross, momentum,
-or RSI rules, and none appears in the four frontier charts above.
+These candidates do not change the existing Golden Cross, momentum, or RSI
+rules, and none appears in the four strategy–ticker frontier charts above.
 
 Ten capped budgets spread capital across the approved universe, but the ETFs
 overlap individual stocks and all positions remain US equities or cash. Active
@@ -629,27 +623,14 @@ Their advantages can partly offset their limitations, but cannot cancel them.
 |---|---|---|
 | C1 | Full participation before breakout confirmation can offset C3/C6's smaller early exposure | Greater loss if that early entry fails |
 | C3 | Partial entry limits the amount exposed before confirmation | Less participation in a genuine early rebound |
-| C4 | Retains a small breakout account through MACD weakness, with a shared downside exit | Breakout delay and losses before the downside threshold is crossed |
-| C5 | More participation than C4 during early recovery or temporary MACD weakness | More capital exposed if weakness continues |
+| C4 | Holds a confirmed breakout through MACD weakness | Breakout delay and false breakouts |
+| C5 | May participate in a rebound before bullish MACD or breakout confirmation | Failed rebounds and missed gains after exiting at the average |
 | C6 | Scales down exposure when recent volatility is high | Can remain lightly invested during a volatile rebound |
 
-For an arithmetic illustration, give **20% to each candidate portfolio**. The
-following targets apply to one ticker at that equal-weight allocation, assuming
-C6's estimated volatility is **40%**. They are not backtest results; monthly
-account weights would drift between rebalances.
-
-| Signal state | C1 | C3 | C4 | C5 | C6 | Equal-weight blend |
-|---|---:|---:|---:|---:|---:|---:|
-| Fresh C1 entry; no breakout; C3 still partial | 10% | 5% | 7% | 10% | 5% | **7.4%** |
-| Bullish MACD and confirmed breakout; C3 fully invested | 10% | 10% | 10% | 10% | 5% | **9.0%** |
-| MACD off; existing breakout remains active above its exit | 0% | 0% | 3% | 5% | 0% | **1.6%** |
-| Price below the previous 10-day lowest close | 0% | 0% | 0% | 0% | 0% | **0%** |
-
-These percentages refer to total equity in each candidate or the combined portfolio,
-respectively. Apply each ticker's own signals; the ten need not be in the same state.
 C1, C3, and C6 share their entry/exit conditions and mainly change the amount
-invested. C4 and C5 also share the same breakout state. Correlated losses, missed
-rebounds while in cash, and losses before an exit takes effect therefore remain.
+invested. C4 uses breakout confirmation; C5 uses Bollinger-band re-entry.
+Correlated losses, missed rebounds while in cash, and losses before an exit
+takes effect still remain.
 Retaining five candidates does not establish five independent sources of return
 or prove that all five deserve positive weights in a final portfolio.
 
@@ -716,41 +697,23 @@ and [Donchian channels](https://www.tradingview.com/support/solutions/4300050225
 
 #### Version 2 proposal and relationship map
 
-The aim is to give the candidates different trading jobs. Several original
-candidates share their decisions and mainly change the amount invested.
+The aim is to give the candidates different trading jobs. C1, C3, and C6
+share their decisions and mainly change the amount invested.
 Changing their allocation weights alone cannot separate their weaknesses very much.
-The following version 2 is now implemented as a research experiment. Successful
+The following rules are implemented as a research experiment. Successful
 software checks do not establish an investment improvement; compare the measured
-results below with the original designs and exposure controls.
+results below with the benchmark and exposure controls.
 
-| Candidate | Proposed role or change | Main limitation | Possible compensation |
+| Candidate | Trading role | Main limitation | Possible compensation |
 |---|---|---|---|
 | C1 | Keep MACD entry with the additional 10-day-low exit | False recoveries and repeated trades in sideways markets | C4 waits for breakout confirmation and may avoid some early entries |
 | C3 | Keep partial entry followed by confirmation; a position-sizing alternative | Less participation in early rebound gains | C1 can provide fuller early participation |
-| C4, revised | Use pure 20/10 closing-price breakout; remove its 70% C1 allocation | Late rebound entry and false breakouts | C1 and revised C5 may enter before a 20-day high |
-| C5, revised | Use Bollinger-band re-entry with an explicit downside exit | Failed rebounds; exiting at the mean can miss a longer advance | C1 and C4 may keep holding during a sustained trend |
+| C4 | Use pure 20/10 closing-price breakout | Late rebound entry and false breakouts | C1 and C5 may enter before a 20-day high |
+| C5 | Use Bollinger-band re-entry with an explicit downside exit | Failed rebounds; exiting at the mean can miss a longer advance | C1 and C4 may keep holding during a sustained trend |
 | C6 | Retain volatility-based sizing as risk control | High volatility can reduce exposure before a strong rebound | Other candidates retain their normal signal-based participation |
 
-Revised C4 enters above the highest adjusted close in the previous 20 trading
-days, holds its position, and exits below the lowest adjusted close in the previous
-10 trading days. Both thresholds exclude the current observation. It starts in cash.
 C1, C3, and C6 still exit when MACD is no longer bullish or the downside threshold
 breaks. C3 and C6 are parallel sizing alternatives sharing C1's conditions.
-
-The largest change in trading behavior would come from revising C4 and C5:
-both original candidates depend substantially on C1. Revised C5 uses:
-
-1. The previous close was below its then-current 20-day lower Bollinger band.
-2. Enter when the close returns inside the band, rises above the previous close,
-   remains below the middle moving average, and is at or above the previous
-   10-day lowest close.
-3. After entry, exit when the close reaches or exceeds the middle average, or
-   falls below the previous 10-day lowest close.
-
-This may enter a rebound while MACD remains bearish and before a breakout occurs.
-Returning inside the band does not establish that a decline has ended; prices can
-remain outside bands during strong trends. Background:
-[Fidelity's Bollinger Bands guide](https://www.fidelity.com/learning-center/trading-investing/technical-analysis/technical-indicator-guide/bollinger-bands).
 
 Solid arrows show data or calculation flow. Dotted arrows show shared trading
 conditions. C3 and C6 are not mandatory steps applied sequentially to every strategy.
@@ -760,8 +723,8 @@ The allocation stage adds cost accounting around the existing Phase 1 timing con
 flowchart TD
     DATA["Approved Phase 1 adjusted prices<br/>The same ten tickers"]
     DATA --> C1["C1: MACD plus downside exit<br/>Earlier trend participation"]
-    DATA --> C4["C4 v2: pure 20/10 breakout<br/>Confirmation and trend holding"]
-    DATA --> C5["C5 v2: Bollinger-band re-entry<br/>Mean or downside exit"]
+    DATA --> C4["C4: pure 20/10 breakout<br/>Confirmation and trend holding"]
+    DATA --> C5["C5: Bollinger-band re-entry<br/>Mean or downside exit"]
     C1 -. "Shared entry and exit conditions" .-> C3["C3: partial then full position<br/>20-day breakout confirms sizing"]
     C1 -. "Shared entry and exit conditions" .-> C6["C6: volatility-based sizing<br/>Uses 20-day raw-asset returns"]
     C1 --> TEST["Shared Phase 1 backtest<br/>Close decisions earn next-day returns"]
@@ -787,9 +750,9 @@ five independent return sources or require every candidate to receive a positive
 
 | Market situation | Potential contribution |
 |---|---|
-| Early rebound before bullish MACD | Revised C5 may participate while C1 and C4 remain in cash |
+| Early rebound before bullish MACD | C5 may participate while C1 and C4 remain in cash |
 | Sustained advance following a rebound | C1 and C4 may hold after C5 exits at the mean |
-| Temporary MACD weakness without a downside breakdown | Revised C4 may hold while C1 exits |
+| Temporary MACD weakness without a downside breakdown | C4 may hold while C1 exits |
 | Failed early entry | C3's smaller initial position and C6's scaling may reduce the amount lost |
 | Continued decline below the shared exit threshold | Several candidates may exit together; common downside exposure remains |
 
@@ -857,7 +820,7 @@ The equal-weight asset control rebalances all ten ticker targets daily; it is no
 passive buy-and-hold. The Phase 1 control equally averages Golden Cross, momentum,
 and RSI signals, then rebalances daily. That control nets same-ticker signals into
 one account, whereas the new five-candidate blend retains separate virtual accounts.
-Original C4/C5 follow their earlier definitions. Removing a candidate redistributes
+Removing a candidate redistributes
 capital equally across the other four at monthly rebalances; it does not select
 new tickers or refit an optimizer.
 
@@ -875,11 +838,9 @@ while Sharpe uses daily excess returns. Drawdown includes the evaluation's initi
 |---|---:|---:|---:|---:|---:|
 | C1 | 9.79% | 9.42% | 0.828 | -8.85% | 49.73% |
 | C3 | 7.98% | 7.73% | 0.776 | -6.63% | 42.67% |
-| Revised C4 | 8.26% | 7.73% | 0.809 | -6.63% | 46.21% |
-| Revised C5 | -2.15% | 6.50% | -0.607 | -24.44% | 8.43% |
+| C4 | 8.26% | 7.73% | 0.809 | -6.63% | 46.21% |
+| C5 | -2.15% | 6.50% | -0.607 | -24.44% | 8.43% |
 | C6 | 6.98% | 6.47% | 0.769 | -6.66% | 41.83% |
-| Original C4 | 9.37% | 8.54% | 0.860 | -7.34% | 48.67% |
-| Original C5 | 10.72% | 9.73% | 0.892 | -9.15% | 54.80% |
 | Five-candidate fixed blend | 6.19% | 6.25% | 0.676 | -8.86% | 37.82% |
 | Five-candidate dynamic blend | 6.15% | 6.76% | 0.624 | -9.30% | 39.97% |
 | Exposure-matched C1 | 7.69% | 7.40% | 0.771 | -6.99% | 39.06% |
@@ -891,11 +852,10 @@ targets. The fixed blend has lower volatility than this control, but lower retur
 and a deeper drawdown. Its lower risk cannot be attributed entirely to successful
 diversification: a large cash allocation also reduces market exposure.
 
-The revised C4 trades less than C1 and has a smaller drawdown, at the cost of a
-lower return. Revised C5 has a low return correlation with C1 (**0.111**) but loses
+C4 trades less than C1 and has a smaller drawdown, at the cost of a
+lower return. C5 has a low return correlation with C1 (**0.111**) but loses
 money even before trading costs. Its different behavior does not establish a
-useful portfolio contribution. The original C5 performs better in this historical
-comparison, so replacing it is not supported by these results alone.
+useful portfolio contribution.
 
 | Fixed blend variant | Annual return | Sharpe | Maximum drawdown |
 |---|---:|---:|---:|
@@ -906,7 +866,7 @@ comparison, so replacing it is not supported by these results alone.
 | Remove C5 | 8.28% | 0.834 | -5.85% |
 | Remove C6 | 5.99% | 0.638 | -10.14% |
 
-Removing revised C5 improves return, Sharpe, and drawdown here. Removing C6 worsens
+Removing C5 improves return, Sharpe, and drawdown here. Removing C6 worsens
 all three relative to the full blend, supporting its retention in this particular
 comparison. These are diagnostic removals on the same evaluated history, not a
 validated selection rule for future trading. Redistributing weights also changes
@@ -928,8 +888,8 @@ and sales. Frequent strategy trading remains a practical limitation.
 |---|---:|---:|---:|
 | C1 | 100.00% | -0.98% | 100.00% |
 | C3 | 100.00% | -0.81% | 100.00% |
-| Revised C4 | 12.16% | -0.71% | 94.12% |
-| Revised C5 | 3.30% | -0.08% | 34.71% |
+| C4 | 12.16% | -0.71% | 94.12% |
+| C5 | 3.30% | -0.08% | 34.71% |
 | C6 | 100.00% | -0.69% | 100.00% |
 
 C3 and C6 reduce the amount exposed on some bad days but still lose alongside C1.
@@ -957,14 +917,14 @@ invariance, warm-up, state retention, confirmed entries, downside exits, volatil
 sizing, initial fees, price-drift turnover, cash, monthly ranking, tied ranks, and
 allocation drift. Recorded fees match traded notional times the cost rate. All
 three cost scenarios completed end to end using the same approved inputs.
-Including the optional frontier below, the current total is **931 lines**, counting
+Including the optional frontier below, the current total is **929 lines**, counting
 all source, tests, comments, and blank lines. Phase 2 calculations are unchanged.
 No dataset was downloaded, refreshed, or saved by the experiment.
 
 ### Efficient frontier across five strategy portfolios
 
-Updated October 26, 2026. This extends the flow map by treating **C1, C3, revised
-C4, revised C5, and C6 as five investable accounts**. Each account already trades
+Updated October 26, 2026. This extends the flow map by treating **C1, C3,
+C4, C5, and C6 as five investable accounts**. Each account already trades
 the ten approved tickers. A 40% allocation to C1 funds that entire account,
 including its cash; it does not invest 40% in one stock or apply MACD to a
 strategy equity curve. All five remain eligible for optimization.
@@ -1111,7 +1071,7 @@ weight sums, and upper-frontier risk ordering pass. An independent check of all
 31 possible candidate subsets reproduces the maximum Sharpe within `1e-8` at
 0, 5, and 10 basis points; a separate convex formulation confirms the Phase 1
 and raw-asset comparison maxima. The optional integration returns the same
-results as the direct workflow. Total code is **931 lines**; approved inputs,
+results as the direct workflow. Total code is **929 lines**; approved inputs,
 strategy rules, and Phase 2 calculations are unchanged.
 
 ## Existing data
