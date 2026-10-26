@@ -1,18 +1,12 @@
-import os
-
 import numpy as np
 import pytest
 
 from combinations import v2_signals
-from data import load_prices
 
 
 @pytest.fixture(scope="module")
-def sample():
-    folder = os.environ.get("BACKTEST_DATA")
-    if not folder:
-        pytest.skip("Set BACKTEST_DATA to the approved existing dataset folder.")
-    prices = load_prices(folder).iloc[:500]
+def sample(approved_prices):
+    prices = approved_prices.iloc[:500].copy()
     return prices, v2_signals(prices)
 
 

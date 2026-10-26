@@ -22,16 +22,15 @@ def v2_signals(prices):
     active = (macd > signal_line) & (prices >= low)
     reentry = (prices.shift(1) < lower_band.shift(1)) & (prices >= lower_band)
     reentry &= (prices > prices.shift(1)) & (prices < middle) & (prices >= low)
-    signals = {}
-    for name in ["C1", "C3", "C4", "C5", "C6"]:
+    signals = {"C1": active.astype(float).mask(signal_line.isna())}
+    for name in ["C3", "C4", "C5"]:
         signals[name] = pd.DataFrame(np.nan, index=prices.index, columns=prices.columns)
-    signals["C1"] = active.astype(float).mask(signal_line.isna())
     # Zero volatility gives full sizing; higher volatility can only reduce it.
     scale = (0.20 / volatility).clip(upper=1.0)
     signals["C6"] = signals["C1"] * scale
-    partial = pd.Series(0.0, index=prices.columns)
-    breakout = partial.copy()
-    rebound = partial.copy()
+    partial = pd.Series(0.0, index=prices.columns)  # C3 starts at half size before confirmation.
+    breakout = partial.copy()  # C4 holds until the lower channel is crossed.
+    rebound = partial.copy()  # C5 holds a rebound until recovery or a downside exit.
     # The 26-day MACD plus its 9-day signal first becomes available on day 34.
     for day in range(33, len(prices)):
         close = prices.iloc[day]

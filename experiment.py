@@ -34,9 +34,8 @@ def experiment(data_folder, cost_bps, risk_free):
     later = ~history
     if history.sum() < 252 or later.sum() < 252:
         raise ValueError("This experiment needs at least a year before and after January 2020.")
-    runs = {}
-    for name, table in positions.items():
-        runs[name] = simulate({name: table}, asset_returns, cost_bps)
+    runs = {name: simulate({name: table}, asset_returns, cost_bps)
+            for name, table in positions.items()}
     scores = pd.DataFrame({name: runs[name]["returns"] for name in names})
     candidates = {name: positions[name] for name in names}
     runs["Fixed"] = simulate(candidates, asset_returns, cost_bps)
@@ -53,9 +52,10 @@ def experiment(data_folder, cost_bps, risk_free):
     summary = summarize(returns, risk_free)
     for name, run in runs.items():
         exposure = run["exposure"].loc[later]
-        summary.loc[name, "mean_exposure"] = exposure.sum(axis=1).mean()
-        summary.loc[name, "mean_active_tickers"] = exposure.gt(0).sum(axis=1).mean()
         invested = exposure.sum(axis=1)
+        summary.loc[name, "mean_exposure"] = invested.mean()
+        summary.loc[name, "mean_active_tickers"] = exposure.gt(0).sum(axis=1).mean()
+        # Unequal position sizes reduce the effective number of holdings.
         effective = invested ** 2 / exposure.pow(2).sum(axis=1)
         summary.loc[name, "effective_tickers"] = effective.fillna(0).mean()
         summary.loc[name, "annual_turnover"] = run["turnover"].loc[later].mean() * 252

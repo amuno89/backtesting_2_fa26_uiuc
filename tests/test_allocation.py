@@ -1,16 +1,11 @@
-import os
 import numpy as np
 import pytest
 from allocation import simulate
-from data import load_prices
 
 
 @pytest.fixture(scope="module")
-def sample():
-    folder = os.environ.get("BACKTEST_DATA")
-    if not folder:
-        pytest.skip("Set BACKTEST_DATA to the approved existing dataset folder.")
-    returns = load_prices(folder).pct_change(fill_method=None).iloc[1:150]
+def sample(approved_prices):
+    returns = approved_prices.pct_change(fill_method=None).iloc[1:150]
     positions = {str(number): returns * 0 + number / 4 for number in range(5)}
     return returns, positions
 

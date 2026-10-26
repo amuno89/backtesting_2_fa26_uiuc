@@ -4,7 +4,7 @@ import numpy as np
 import pytest
 
 from backtest import backtest
-from data import load_prices, validate_prices
+from data import validate_prices
 from mean_reversion import mean_reversion
 from metrics import summarize
 from run import analyze
@@ -14,11 +14,8 @@ from strategies import golden_cross, momentum
 
 
 @pytest.fixture(scope="module")
-def prices():
-    folder = os.environ.get("BACKTEST_DATA")
-    if not folder:
-        pytest.skip("Set BACKTEST_DATA to the approved existing dataset folder.")
-    return load_prices(folder).iloc[:20]
+def prices(approved_prices):
+    return approved_prices.iloc[:20].copy()
 
 
 @pytest.mark.parametrize("column_names", [None, [f"portfolio_{i}" for i in range(10)]])
@@ -92,8 +89,8 @@ def test_shared_analysis(prices, benchmark_only):
     assert result["summary"].equals(result["benchmark_summary"])
 
 
-def test_mean_reversion_signals(prices):
-    history = load_prices(os.environ["BACKTEST_DATA"]).iloc[:260]
+def test_mean_reversion_signals(approved_prices):
+    history = approved_prices.iloc[:260].copy()
     original = history.copy()
     signals = mean_reversion(history)
     assert signals.index.equals(history.index) and signals.columns.equals(history.columns)

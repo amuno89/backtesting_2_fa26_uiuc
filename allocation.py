@@ -49,13 +49,14 @@ def simulate(positions, asset_returns, cost_bps, scores=None, dynamic=False):
     holdings = np.zeros((count, 10))
     records, weights, exposures = [], [], []
     fee = cost_bps / 10000
-    for day, date in enumerate(dates):
+    months = dates.to_period("M")
+    for day, month in enumerate(months):
         before = capital.sum()
         old_holdings = holdings.copy()
-        new_month = day == 0 or date.to_period("M") != dates[day - 1].to_period("M")
-        if new_month:
+        if day == 0 or month != months[day - 1]:
             allocation = np.full(count, 1 / count)
             if dynamic and day >= 63:
+                # Use only the previous 63 days; tied ranks receive equal weights.
                 trailing = (1 + scores.iloc[day - 63:day]).prod() - 1
                 ranks = trailing.rank(ascending=False, method="average")
                 allocation = (0.35 - 0.05 * ranks).to_numpy()
