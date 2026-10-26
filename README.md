@@ -487,6 +487,11 @@ data-quality and selected-universe limitations below still apply.
 
 ### Proposed strategy combinations
 
+The original candidates below are comparison baselines. The
+[version 2 proposal and relationship map](#version-2-proposal-and-relationship-map)
+describe a different role for C4 and C5; the original allocation examples do not
+apply to those revised rules.
+
 The retained shortlist is **C1, C3, C4, C5, and C6**. C4 replaces C2, whose MACD
 account could remain invested below the 10-day low. The labels preserve the earlier
 discussion; C6 remains part of the research shortlist.
@@ -688,6 +693,105 @@ stay within **600 total code lines**, and keep Phase 2 within its 300-added-line
 limit. This README addition contains no implementation or new market data.
 Indicator background: [MACD](https://www.fidelity.com/learning-center/trading-investing/technical-analysis/technical-indicator-guide/macd)
 and [Donchian channels](https://www.tradingview.com/support/solutions/43000502253-donchian-channels-dc/).
+
+#### Version 2 proposal and relationship map
+
+The aim is to give the candidates different trading jobs. Several original
+candidates share their decisions and mainly change the amount invested.
+Changing their allocation weights alone cannot separate their weaknesses very much.
+The following version 2 remains a research proposal, not an implemented or
+validated improvement. Keep the original designs as comparison baselines.
+
+| Candidate | Proposed role or change | Main limitation | Possible compensation |
+|---|---|---|---|
+| C1 | Keep MACD entry with the additional 10-day-low exit | False recoveries and repeated trades in sideways markets | C4 waits for breakout confirmation and may avoid some early entries |
+| C3 | Keep partial entry followed by confirmation; a position-sizing alternative | Less participation in early rebound gains | C1 can provide fuller early participation |
+| C4, revised | Use pure 20/10 closing-price breakout; remove its 70% C1 allocation | Late rebound entry and false breakouts | C1 and revised C5 may enter before a 20-day high |
+| C5, revised | Use Bollinger-band re-entry with an explicit downside exit | Failed rebounds; exiting at the mean can miss a longer advance | C1 and C4 may keep holding during a sustained trend |
+| C6 | Retain volatility-based sizing as risk control | High volatility can reduce exposure before a strong rebound | Other candidates retain their normal signal-based participation |
+
+Revised C4 enters above the highest adjusted close in the previous 20 trading
+days, holds its position, and exits below the lowest adjusted close in the previous
+10 trading days. Both thresholds exclude the current observation. It starts in cash.
+C1, C3, and C6 still exit when MACD is no longer bullish or the downside threshold
+breaks. C3 and C6 are parallel sizing alternatives sharing C1's conditions.
+
+The largest change in trading behavior would come from revising C4 and C5:
+both original candidates depend substantially on C1. Revised C5 would use:
+
+1. The previous close was below its then-current 20-day lower Bollinger band.
+2. Enter when the close returns inside the band, rises above the previous close,
+   remains below the middle moving average, and is at or above the previous
+   10-day lowest close.
+3. After entry, exit when the close reaches or exceeds the middle average, or
+   falls below the previous 10-day lowest close.
+
+This may enter a rebound while MACD remains bearish and before a breakout occurs.
+Returning inside the band does not establish that a decline has ended; prices can
+remain outside bands during strong trends. Background:
+[Fidelity's Bollinger Bands guide](https://www.fidelity.com/learning-center/trading-investing/technical-analysis/technical-indicator-guide/bollinger-bands).
+
+Solid arrows show data or calculation flow. Dotted arrows show shared trading
+conditions. C3 and C6 are not mandatory steps applied sequentially to every strategy.
+The new candidates and allocation stages in this map still need implementation.
+
+```mermaid
+flowchart TD
+    DATA["Approved Phase 1 adjusted prices<br/>The same ten tickers"]
+    DATA --> C1["C1: MACD plus downside exit<br/>Earlier trend participation"]
+    DATA --> C4["C4 v2: pure 20/10 breakout<br/>Confirmation and trend holding"]
+    DATA --> C5["C5 v2: Bollinger-band re-entry<br/>Mean or downside exit"]
+    C1 -. "Shared entry and exit conditions" .-> C3["C3: partial then full position<br/>20-day breakout confirms sizing"]
+    C1 -. "Shared entry and exit conditions" .-> C6["C6: volatility-based sizing<br/>Uses 20-day raw-asset returns"]
+    C1 --> TEST["Shared Phase 1 backtest<br/>Close decisions earn next-day returns"]
+    C3 --> TEST
+    C4 --> TEST
+    C5 --> TEST
+    C6 --> TEST
+    TEST --> RETURNS["Aligned daily returns and positions<br/>Retain each candidate's cash"]
+    RETURNS --> MIX["Compare fixed and dynamic allocations<br/>Aggregate ticker target at most 10%"]
+    MIX --> CHECK["Evaluate net returns and drawdowns<br/>Check shared losses and holding overlap"]
+```
+
+The approved prices also supply each candidate's channels, bands, and volatility.
+Allocation uses already executed strategy returns: do not delay those returns
+again. A new allocation decision affects subsequent returns. Prices can cause
+actual holdings to drift from their targets. Five candidate labels do not establish
+five independent return sources or require every candidate to receive a positive weight.
+
+| Market situation | Potential contribution |
+|---|---|
+| Early rebound before bullish MACD | Revised C5 may participate while C1 and C4 remain in cash |
+| Sustained advance following a rebound | C1 and C4 may hold after C5 exits at the mean |
+| Temporary MACD weakness without a downside breakdown | Revised C4 may hold while C1 exits |
+| Failed early entry | C3's smaller initial position and C6's scaling may reduce the amount lost |
+| Continued decline below the shared exit threshold | Several candidates may exit together; common downside exposure remains |
+
+Assess responsiveness at the combined-portfolio level. A breakout rule deliberately
+waits for confirmation while other candidates try to participate sooner. This does
+not guarantee quick entry from every candidate or prevent losses before exits take effect.
+
+To test whether the candidates compensate for each other's limitations, check:
+
+1. **Entry and exit overlap:** do they trade at different times, rather than merely
+   investing different amounts?
+2. **Shared losses:** on C1's worst 10% of days, do the others gain, lose, or hold cash?
+3. **Contribution after costs:** does removing a candidate worsen the combined result?
+4. **Comparable exposure:** does improvement survive comparison with simply investing less?
+
+Retain C6, the ten approved tickers, and the aggregate 10% target limit per ticker.
+Unused budgets stay in cash instead of concentrating in the few active tickers.
+These proposals may separate some trading behavior, but all remain long-only
+equities or cash. Cash can reduce some losses; it cannot profit directly from a
+falling underlying. ETF overlap and common market losses remain possible.
+
+Validation on October 26, 2026: the existing regression suite passed **28 tests**
+using the approved local dataset. This checks the current data loader, Phase 1
+backtest and metrics, existing strategies, and Phase 2 portfolio calculations and
+chart rendering. It does **not** test the five new candidates, costs, monthly
+allocation drift, or their combined performance: those components are not yet
+implemented. The existing codebase totals **600 lines**, including tests, comments,
+and blank lines; implementing the complete experiment requires a budget decision.
 
 ## Existing data
 
