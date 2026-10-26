@@ -13,6 +13,8 @@ The command-line runner uses buy-and-hold, or raw-asset portfolios with `--phase
 RSI mean reversion and Huixin's strategies use the same Python workflow.
 The [Phase 3 frontiers](#phase-3-strategy-frontiers) reuse these functions for
 each strategy and for all 30 strategy–ticker return streams together.
+The [five-strategy frontier](#efficient-frontier-across-five-strategy-portfolios)
+also treats each C1/C3/C4/C5/C6 account as one investable component.
 A risk-free rate must be supplied explicitly; no rate is downloaded or assumed.
 Completed coding work goes to `Kevin-Mean-revision`
 and then through a pull request into `main`.
@@ -343,8 +345,10 @@ one strategy; the fourth combines all **30 streams**. A weight assigns capital
 to that strategy account, including its cash days. The existing trading rules
 and the ten approved tickers are unchanged.
 
-The [five proposed combinations](#proposed-strategy-combinations) below describe
-the next experiments. They are not implemented or included in these frontier results.
+The [five combinations](#proposed-strategy-combinations) below are implemented
+separately. Their account-level frontier appears in the
+[new analysis](#efficient-frontier-across-five-strategy-portfolios); they are not
+included in these four original strategy–ticker frontiers.
 
 All four analyses use **3,955 daily returns, January 4, 2011–September 25, 2026**,
 and the approved **2% illustrative annual risk-free rate**. Signals are calculated
@@ -756,8 +760,13 @@ flowchart TD
     C5 --> TEST
     C6 --> TEST
     TEST --> RETURNS["Aligned daily returns and positions<br/>Retain each candidate's cash"]
+    RETURNS --> ACCOUNTS["Standalone strategy accounts<br/>C1, C3, C4, C5, C6"]
+    ACCOUNTS --> MATRIX["Daily return matrix<br/>One column per whole strategy account"]
+    MATRIX --> STATS["Annual return, risk and correlation<br/>Shared numpy.cov calculation"]
+    STATS --> FRONTIER["3,000 random allocations and optimized frontier<br/>Minimum variance and maximum Sharpe"]
     RETURNS --> MIX["Compare fixed and dynamic allocations<br/>Aggregate ticker target at most 10%"]
-    MIX --> CHECK["Evaluate net returns and drawdowns<br/>Check shared losses and holding overlap"]
+    FRONTIER --> CHECK
+    MIX --> CHECK["Evaluate returns, risk and drawdowns<br/>Check shared losses and holding overlap"]
 ```
 
 The approved prices also supply each candidate's channels, bands, and volatility.
@@ -938,9 +947,162 @@ invariance, warm-up, state retention, confirmed entries, downside exits, volatil
 sizing, initial fees, price-drift turnover, cash, monthly ranking, tied ranks, and
 allocation drift. Recorded fees match traded notional times the cost rate. All
 three cost scenarios completed end to end using the same approved inputs.
-The codebase totals **947 lines**, counting all source, tests, comments, and blank
-lines. Phase 2 source and existing tests are unchanged. No dataset was downloaded,
-refreshed, or saved by the experiment.
+Including the optional frontier below, the current total is **950 lines**, counting
+all source, tests, comments, and blank lines. Phase 2 source remains unchanged.
+No dataset was downloaded, refreshed, or saved by the experiment.
+
+### Efficient frontier across five strategy portfolios
+
+Updated October 26, 2026. This extends the flow map by treating **C1, C3, revised
+C4, revised C5, and C6 as five investable accounts**. Each account already trades
+the ten approved tickers. A 40% allocation to C1 funds that entire account,
+including its cash; it does not invest 40% in one stock or apply MACD to a
+strategy equity curve. All five remain eligible for optimization.
+
+The input is **1,692 aligned daily returns, January 2, 2020–September 25, 2026**,
+with the same **2% illustrative annual risk-free rate**. The main chart excludes
+costs, matching the original frontier convention. Weights are nonnegative, sum
+to one, and rebalance daily. The optimizer fits this same historical sample;
+these are not weights known in 2020 or a test of future performance.
+
+![Efficient frontier across five whole strategy portfolios, colored by Sharpe ratio](docs/five_strategy_frontier.png)
+
+The 3,000 dots are allocations across the five accounts. The green line traces
+40 optimized upper-frontier points. The star improves estimated Sharpe from
+**0.948 for C1 alone to 0.980**, with lower annual return and lower volatility.
+Annual return in this table and on the graph is the arithmetic daily mean times
+252; the maximum-Sharpe portfolio's separate CAGR is **9.75%**.
+
+| Gross portfolio | Annual arithmetic return | Annual volatility | Sharpe | Maximum drawdown |
+|---|---:|---:|---:|---:|
+| Minimum variance | 3.36% | 4.79% | 0.288 | -13.84% |
+| Maximum Sharpe | 9.61% | 7.79% | **0.980** | -6.15% |
+| Equal weights, rebalanced daily | 7.07% | 6.25% | 0.813 | -8.86% |
+| Best standalone account: C1 | 10.91% | 9.42% | 0.948 | -8.61% |
+| Fixed weights, rebalanced monthly | 7.07% | 6.25% | 0.815 | -8.67% |
+| Dynamic weights, rebalanced monthly | 7.32% | 6.76% | 0.791 | -8.20% |
+| Phase 1 equal-signal blend | 9.60% | 12.02% | 0.633 | -24.95% |
+
+| Gross allocation | C1 | C3 | C4 | C5 | C6 |
+|---|---:|---:|---:|---:|---:|
+| Maximum Sharpe | 44.30% | 0.00% | 36.37% | 0.00% | 19.33% |
+| Minimum variance | 0.00% | 0.00% | 5.75% | 49.88% | 44.37% |
+| Equal weights | 20.00% | 20.00% | 20.00% | 20.00% | 20.00% |
+
+Minimum variance minimizes daily fluctuation, not drawdown or lost purchasing
+power. It gives roughly half its budget to C5, which has a negative standalone
+return, and suffers a larger drawdown than the maximum-Sharpe allocation.
+C5's low correlation can reduce volatility without making it an attractive
+return contributor. Zero weights at the maximum do not remove C3 or C5 from
+other frontier points or establish that they will be unhelpful in another period.
+
+The maximum-Sharpe allocation averages **46.92% invested**, **5.99 active tickers**,
+and **5.54 effective holdings**. Its lower volatility partly reflects cash.
+Each ticker's aggregate target stays at or below 10%; ETF overlap still remains.
+The earlier monthly fixed and dynamic rules have gross Sharpe ratios of **0.815**
+and **0.791**, respectively. Their weights drift between monthly rebalances;
+they are different allocation rules from this daily-rebalanced frontier.
+The Phase 1 blend uses the existing equal-signal rule. These predefined rules
+also differ from selecting optimized weights using the complete evaluation sample.
+
+#### Correlation between strategy accounts
+
+![Correlation heatmap for the five strategy portfolios on matching evaluation dates](docs/five_strategy_correlation.png)
+
+C1 and C3 are the most correlated pair (**0.968**); C1 and C6 are also strongly
+related (**0.924**). They share entry and exit conditions. C4 and C5 are the least
+correlated pair (**0.064**). Five strategy names do not establish five independent
+return sources: C5 still loses money before costs, while C4 offers
+less overlap with C1 (**0.784**) and a positive standalone return.
+
+#### Comparison with the earlier phases
+
+Every row below is recomputed on the **same 2020–2026 dates**, before costs.
+The Phase 1 and raw-asset optimizers can select individual ticker streams;
+the five-account optimizer keeps each candidate's internal ticker budgets.
+These different constraints help explain the different attainable risk and return.
+
+| Universe: maximum Sharpe unless stated | Annual arithmetic return | Annual volatility | Sharpe |
+|---|---:|---:|---:|
+| Five whole strategy accounts | 9.61% | 7.79% | 0.980 |
+| Golden Cross: ten ticker streams | 19.65% | 14.89% | 1.187 |
+| Momentum: ten ticker streams | 17.90% | 14.51% | 1.097 |
+| RSI: ten ticker streams | 6.96% | 9.05% | 0.550 |
+| Combined Phase 1: thirty streams | 17.56% | 12.46% | **1.251** |
+| Raw assets: ten tickers | 25.01% | 19.57% | 1.177 |
+| Buy-and-hold SPY | 16.46% | 20.06% | 0.722 |
+
+The five-account mix improves on its own best constituent but does not beat the
+Phase 1 combined frontier's maximum Sharpe on these dates. Its maximum operates
+at a lower volatility and return. These numbers also differ from the older
+2011–2026 charts because the sample changed; they are not evidence of a coding
+error or a general advantage over raw assets.
+
+#### Trading-cost sensitivity
+
+These are separate fits after applying each assumed cost to standalone strategy
+trading. **Additional costs of transferring capital between strategy accounts
+are excluded**, so the positive-cost rows are not fully costed executable
+portfolios. The existing monthly fixed/dynamic ledger includes those transfers
+and remains the appropriate accounting workflow for those allocation rules.
+
+| Standalone one-way cost | Maximum Sharpe | Annual arithmetic return | Annual volatility | Fitted allocation |
+|---|---:|---:|---:|---|
+| 0 basis points | 0.980 | 9.61% | 7.79% | C1 44.30%, C4 36.37%, C6 19.33% |
+| 5 basis points | 0.867 | 9.01% | 8.11% | C1 50.02%, C4 49.98% |
+| 10 basis points | 0.759 | 8.02% | 7.95% | C1 40.42%, C4 59.58% |
+
+C6 remains in the eligible universe even when its fitted maximum-Sharpe weight
+becomes zero after costs. Its benefit in the earlier equal-weight removal test
+and its role in an optimized portfolio answer different questions. The change
+in selected weights also shows sensitivity to cost assumptions; it is not a
+validated instruction to switch allocations in live trading.
+
+#### Data flow and reproduction
+
+`experiment.py` reuses Phase 1 price data and next-day execution, then the existing
+`allocation.py` calculates each complete strategy account's daily return.
+`result["returns"]` contains candidates and controls; select only C1/C3/C4/C5/C6
+for the **1,692 × 5** frontier input. Retain zero-return cash observations and any
+fees charged on exit days. Do not shift these returns again or drop inactive
+strategies on each date. The first three input rows before costs are shown below;
+values are daily decimal returns, not percentages.
+
+| Date | C1 | C3 | C4 | C5 | C6 |
+|---|---:|---:|---:|---:|---:|
+| 2020-01-02 | 0.006816 | 0.006816 | 0.008576 | 0.000000 | 0.006816 |
+| 2020-01-03 | -0.006157 | -0.006157 | -0.007707 | 0.000000 | -0.006157 |
+| 2020-01-06 | 0.002523 | 0.002523 | 0.002452 | 0.000000 | 0.002523 |
+
+With `include_frontier=True`, `result["frontier"]` uses the existing
+`portfolio.py` schema: a 5 × 5 correlation/covariance matrix, 3,000 × 5 simulated
+weights, 40 × 5 frontier weights, and comparison metrics and allocations.
+Covariance is still `numpy.cov(..., rowvar=False, ddof=1) * 252`; no separate
+data pipeline or optimizer was added.
+
+Use the existing Python interface for the gross chart; the CLI remains unchanged:
+
+```python
+from experiment import experiment
+from plots import plot_portfolios
+result = experiment("data", 0, 0.02, include_frontier=True)
+frontier = result["frontier"]
+figures = plot_portfolios(frontier, label="Five strategy accounts")
+```
+
+This returns figures in memory. The two PNGs above were explicitly exported for
+this update. For a positive-cost result, a chart must state that standalone
+costs are included and allocation-transfer costs are excluded; the generic
+plot's default "no costs" footer is suitable only for the gross example above.
+
+Validation: **38 existing tests pass**. Directly weighted daily returns reproduce
+the displayed return, volatility, and Sharpe calculations. All portfolio bounds,
+weight sums, and upper-frontier risk ordering pass. An independent check of all
+31 possible candidate subsets reproduces the maximum Sharpe within `1e-8` at
+0, 5, and 10 basis points; a separate convex formulation confirms the Phase 1
+and raw-asset comparison maxima. The optional integration returns the same
+results as the direct workflow. Total code is **950 lines**; approved inputs,
+strategy rules, and Phase 2 source are unchanged.
 
 ## Existing data
 

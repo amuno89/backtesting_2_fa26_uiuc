@@ -10,11 +10,12 @@ from combinations import v2_signals
 from data import load_prices
 from mean_reversion import mean_reversion
 from metrics import summarize
+from portfolio import analyze_portfolios
 from strategies import golden_cross, momentum
 
 
-def experiment(data_folder, cost_bps, risk_free):
-    """Use 2011–2019 for exposure matching; report the later 2020+ observations."""
+def experiment(data_folder, cost_bps, risk_free, include_frontier=False):
+    """Evaluate 2020+ returns; optionally combine the five whole strategy accounts."""
     prices = load_prices(data_folder)
     signals = v2_signals(prices)
     names = list(signals)
@@ -72,9 +73,13 @@ def experiment(data_folder, cost_bps, risk_free):
     basket_return = asset_returns.loc[later].mean(axis=1)
     stress = pd.DataFrame({"basket_down_over_1pct": returns.loc[basket_return < -0.01].mean(),
                            "basket_up_over_1pct": returns.loc[basket_return > 0.01].mean()})
-    return {"summary": summary, "diagnostics": diagnostics, "stress": stress,
+    result = {"summary": summary, "diagnostics": diagnostics, "stress": stress,
             "correlation": returns[names].corr(), "returns": returns, "runs": runs,
             "control_scale": scale, "period": f"{returns.index[0].date()} to {returns.index[-1].date()}"}
+    if include_frontier:
+        best = summary.loc[names, "sharpe_ratio"].idxmax()
+        result["frontier"] = analyze_portfolios(returns[names], risk_free, benchmark=best)
+    return result
 
 
 def main():
